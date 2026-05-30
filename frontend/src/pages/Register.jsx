@@ -12,7 +12,7 @@ const Register = () => {
     <div className="min-h-screen bg-black flex items-center justify-center p-4">
       <div className="w-full max-w-4xl">
         <div className="text-center mb-10">
-          <div className="w-16 h-16 bg-gradient-to-r from-yellow-500 to-yellow-700 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 flex items-center justify-center mx-auto mb-4">
             <img src={logo} alt="logo" />
           </div>
           <h1 className="text-3xl font-bold text-white">Adhyaya AI</h1>

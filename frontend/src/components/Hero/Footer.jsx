@@ -6,7 +6,7 @@ const Footer = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <div className="flex items-center justify-center space-x-2 mb-6">
-              <div className="w-10 h-10 bg-gradient-to-r from-yellow-500 to-yellow-700 rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 flex items-center justify-center">
                 <img src={logo} alt="Logo" />
               </div>
               <span className="text-xl font-bold text-gold-400">Adhyaya AI</span>
