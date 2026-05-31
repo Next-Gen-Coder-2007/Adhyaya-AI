@@ -1,11 +1,13 @@
-import logo from '../../assets/logo.png'
-import { Link } from 'react-router-dom'
+import logo from '../../assets/logo.png';
+import { Link } from 'react-router-dom';
+import { useState } from 'react';
 
 const Navbar = () => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const handleExploreClick = () => {
-    const el = document.getElementById('ai-agents')
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
+    const el = document.getElementById('ai-agents');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   return (
     <nav className="sticky top-0 z-50 bg-black/80 backdrop-blur-md border-b border-gray-800">
@@ -17,18 +19,79 @@ const Navbar = () => {
             </div>
             <span className="text-xl font-bold text-gold-400">Adhyaya AI</span>
           </div>
-          <div className="flex items-center space-x-4">
-            <button onClick={handleExploreClick} className="px-4 py-2 text-gold-400 border border-gold-600 rounded-lg hover:bg-gold-900/20 transition-colors cursor-pointer">
+
+          <div className="hidden md:flex items-center space-x-4">
+            <button
+              onClick={handleExploreClick}
+              className="px-4 py-2 text-gold-400 border border-gold-600 rounded-lg hover:bg-gold-900/20 transition-colors cursor-pointer"
+            >
               Explore Features
             </button>
-            <Link to="/login" className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-yellow-700 text-black rounded-lg hover:opacity-90 transition-opacity font-semibold cursor-pointer">
+            <Link
+              to="/login"
+              className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-yellow-700 text-black rounded-lg hover:opacity-90 transition-opacity font-semibold cursor-pointer"
+            >
               Get Started Free
             </Link>
           </div>
+
+          <div className="md:hidden">
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="text-gold-400 focus:outline-none"
+            >
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                {isMenuOpen ? (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                ) : (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                )}
+              </svg>
+            </button>
+          </div>
         </div>
+
+        {isMenuOpen && (
+          <div className="md:hidden bg-black/90 border-t border-gray-800">
+            <div className="px-2 pt-2 pb-3 space-y-1">
+              <button
+                onClick={() => {
+                  handleExploreClick();
+                  setIsMenuOpen(false);
+                }}
+                className="block w-full text-left px-4 py-2 text-gold-400 hover:bg-gold-900/20 rounded-lg"
+              >
+                Explore Features
+              </button>
+              <Link
+                to="/login"
+                onClick={() => setIsMenuOpen(false)}
+                className="block w-full text-left px-4 py-2 bg-gradient-to-r from-yellow-500 to-yellow-700 text-black rounded-lg hover:opacity-90 font-semibold"
+              >
+                Get Started Free
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
     </nav>
-  )
-}
+  );
+};
 
-export default Navbar
+export default Navbar;
