@@ -1,44 +1,49 @@
-import { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { use, useState } from 'react';
+import { Eye, EyeOff, Mail, Lock, AlertCircle } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
-import { jwtDecode } from 'jwt-decode';
 import logo from '../assets/logo.png';
+import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ email: '', password: '' });
+  const [error, setError] = useState('');
+  const { loginAuth } = useAuth();
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Email/Password Login Credentials:', {
-      email: formData.email,
-      password: formData.password,
-    });
+    setError('');
+    try {
+      const res = await loginAuth('/auth/login', formData);
+      navigate('/dashboard')
+    } catch (err) {
+      setError(err.response?.data?.error || 'Something went wrong. Please try again.');
+    }
   };
 
   const login = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
-      console.log(tokenResponse)
-
-      const userInfo = await fetch(
-        'https://www.googleapis.com/oauth2/v3/userinfo',
-        {
-          headers: {
-            Authorization: `Bearer ${tokenResponse.access_token}`,
-          },
-        }
-      ).then((res) => res.json())
-
-      console.log(userInfo)
+      setError('');
+      try {
+        const res = await loginAuth("/auth/google", {
+          access_token: tokenResponse.access_token,
+        });
+        navigate('/dashboard')
+      } catch (err) {
+        setError(err.response?.data?.error || 'Google login failed. Please try again.');
+      }
     },
 
     onError: () => {
-      console.log('Login Failed')
+      setError('Google login failed. Please try again.');
     },
   });
 
@@ -52,6 +57,13 @@ const Login = () => {
           <h1 className="text-3xl font-bold text-white">Adhyaya AI</h1>
           <p className="text-gray-400 mt-2">Sign in to continue your learning journey</p>
         </div>
+
+        {error && (
+          <div className="mb-6 flex items-start gap-3 bg-red-950/60 border border-red-600/50 rounded-xl px-4 py-3">
+            <AlertCircle className="h-5 w-5 text-red-400 mt-0.5 shrink-0" />
+            <p className="text-red-400 text-sm">{error}</p>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="relative">

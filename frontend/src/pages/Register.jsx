@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Eye, EyeOff, Mail, Lock, User, AlertCircle } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
 import logo from '../assets/logo.png';
+import api from "../api/axios";
+import { useAuth } from '../context/AuthContext';
 
 const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -14,33 +16,50 @@ const Register = () => {
     password: '',
     confirmPassword: '',
   });
+  const [error, setError] = useState('');
+  const { loginAuth } = useAuth();
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Registration Credentials:', {
-      fullName: formData.fullName,
-      email: formData.email,
-      password: formData.password,
-      confirmPassword: formData.confirmPassword,
-    });
+    setError('');
+
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    try {
+      const res = await api.post("/auth/register", {
+        name: formData.fullName,
+        email: formData.email,
+        password: formData.password,
+      });
+      navigate('/login');
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Registration failed. Please try again.');
+    }
   };
 
   const login = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
-      console.log(tokenResponse);
-      const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-        headers: {
-          Authorization: `Bearer ${tokenResponse.access_token}`,
-        },
-      }).then((res) => res.json());
-      console.log(userInfo);
+      setError('');
+      try {
+        const res = await loginAuth("/auth/google", {
+          access_token: tokenResponse.access_token,
+        });
+        navigate('/dashboard')
+      } catch (err) {
+        setError(err.response?.data?.error || 'Google registration failed. Please try again.');
+      }
     },
     onError: () => {
-      console.log('Login Failed');
+      setError('Google registration failed. Please try again.');
     },
   });
 
@@ -55,8 +74,14 @@ const Register = () => {
           <p className="text-gray-400 mt-2">Create your account to start learning</p>
         </div>
 
+        {error && (
+          <div className="mb-6 flex items-start gap-3 bg-red-950/60 border border-red-600/50 rounded-xl px-4 py-3">
+            <AlertCircle className="h-5 w-5 text-red-400 mt-0.5 shrink-0" />
+            <p className="text-red-400 text-sm">{error}</p>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* 2x2 Grid for Input Fields */}
           <div className="grid grid-cols-2 gap-4">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
