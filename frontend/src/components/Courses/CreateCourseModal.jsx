@@ -1,22 +1,25 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import axios from 'axios';
+import api from '../../api/axios';
 
-const CreateCourseModal = ({ isOpen, onClose, onGenerate }) => {
+const CreateCourseModal = ({ isOpen, onClose, fetchCourses }) => {
   const [ytLink, setYtLink] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
 
   useEffect(() => {
     if (!isOpen) {
       setYtLink('');
       setThumbnailUrl('');
       setTitle('');
+      setDescription('');
     }
   }, [isOpen]);
 
   const extractThumbnailUrl = async (url) => {
-    if (!url) return { thumbnailUrl: '', title: '' };
+    if (!url) return { thumbnailUrl: '', title: '', description: '' };
 
     const videoRegex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/;
     const videoMatch = url.match(videoRegex);
@@ -30,10 +33,11 @@ const CreateCourseModal = ({ isOpen, onClose, onGenerate }) => {
         );
         const data = await response.data;
         const videoTitle = data.items?.[0]?.snippet?.title || 'Untitled Video';
-        return { thumbnailUrl, title: videoTitle };
+        const videoDescription = data.items?.[0]?.snippet?.description || 'No description available';
+        return { thumbnailUrl, title: videoTitle, description: videoDescription };
       } catch (err) {
         console.error(err);
-        return { thumbnailUrl, title: 'Untitled Video' };
+        return { thumbnailUrl, title: 'Untitled Video', description: 'No description available' };
       }
     }
 
@@ -52,21 +56,23 @@ const CreateCourseModal = ({ isOpen, onClose, onGenerate }) => {
           data.items?.[0]?.snippet?.thumbnails?.maxres?.url ||
           data.items?.[0]?.snippet?.thumbnails?.high?.url ||
           '';
-        return { thumbnailUrl, title: playlistTitle };
+        const playlistDescription = data.items?.[0]?.snippet?.description || 'No description available';
+        return { thumbnailUrl, title: playlistTitle, description: playlistDescription };
       } catch (err) {
         console.error(err);
-        return { thumbnailUrl: '', title: 'Untitled Playlist' };
+        return { thumbnailUrl: '', title: 'Untitled Playlist', description: 'No description available' };
       }
     }
 
-    return { thumbnailUrl: '', title: '' };
+    return { thumbnailUrl: '', title: '', description: '' };
   };
 
   useEffect(() => {
     const loadThumbnailAndTitle = async () => {
-      const { thumbnailUrl, title } = await extractThumbnailUrl(ytLink);
+      const { thumbnailUrl, title, description } = await extractThumbnailUrl(ytLink);
       setThumbnailUrl(thumbnailUrl);
       setTitle(title);
+      setDescription(description);
     };
 
     if (ytLink) {
@@ -74,17 +80,32 @@ const CreateCourseModal = ({ isOpen, onClose, onGenerate }) => {
     } else {
       setThumbnailUrl('');
       setTitle('');
+      setDescription('');
     }
   }, [ytLink]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onGenerate(ytLink);
-    setYtLink('');
-    setThumbnailUrl('');
-    setTitle('');
-    onClose();
-  };
+
+    try {
+      const courseData = {
+        image_url: thumbnailUrl,
+        title,
+        description,
+      };
+
+      const response = await api.post('/courses', courseData);
+      console.log('Course created:', response.data);
+      await fetchCourses();
+      setYtLink('');
+      setThumbnailUrl('');
+      setTitle('');
+      setDescription('');
+      onClose();
+    } catch (error) {
+      console.error('Error creating course:', error);
+    }
+};
 
   if (!isOpen) return null;
 

@@ -1,44 +1,58 @@
-import { BookOpen, Clock, Flame, PlayCircle } from 'lucide-react';
+import { PlayCircle } from 'lucide-react';
 
 const CourseCard = ({ course, onClick }) => (
   <div
     onClick={onClick}
-    className="group rounded-2xl bg-zinc-950 border border-zinc-900 p-5 hover:border-amber-500/30 transition-all duration-200 cursor-pointer"
+    className="group rounded-2xl bg-[#0a0a0a] border border-[#1e1e1e] overflow-hidden
+              hover:border-amber-600/60 transition-all duration-300
+              hover:-translate-y-1 hover:shadow-[0_16px_48px_rgba(217,119,6,0.15)]"
   >
-    {course.thumbnail_url && (
-      <div className="mb-4 overflow-hidden rounded-lg">
+    {course.image_url && (
+      <div className="w-full aspect-video overflow-hidden relative">
         <img
-          src={course.thumbnail_url}
+          src={course.image_url}
           alt={course.title}
-          className="w-full h-40 object-cover rounded-lg"
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           onError={(e) => {
-            e.target.src = 'https://placehold.co/600x400?text=Thumbnail+Not+Available';
+            e.target.src = 'https://placehold.co/640x360?text=Thumbnail+Not+Available';
           }}
         />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-5">
+          <button
+            onClick={(e) => e.stopPropagation()}
+            className="opacity-0 group-hover:opacity-100 flex items-center gap-2 bg-gradient-to-r from-amber-600 to-yellow-500 text-black font-medium py-2 px-4 rounded-lg
+                      shadow-[0_0_15px_rgba(217,119,6,0.5)] hover:shadow-[0_0_25px_rgba(217,119,6,0.8)]
+                      transition-all duration-300 cursor-pointer"
+          >
+            <PlayCircle className="w-4 h-4" />
+            Continue
+          </button>
+        </div>
       </div>
     )}
-    <div className="flex items-start justify-between mb-4">
-      <div className="w-12 h-12 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
-        <BookOpen className="w-6 h-6 text-amber-500" />
-      </div>
-      <span className="text-xs px-2 py-1 rounded-full bg-white/5 text-zinc-400">
-        {course.category || 'General'}
-      </span>
-    </div>
-    <h3 className="text-lg font-semibold text-white mb-2">{course.title}</h3>
-    <p className="text-sm text-zinc-600 mb-4 line-clamp-2">{course.description}</p>
-    <div className="flex items-center justify-between text-xs text-zinc-500">
-      <div className="flex items-center gap-3">
-        <span className="flex items-center gap-1">
-          <Clock className="w-3.5 h-3.5" /> {course.duration || '0h'}
-        </span>
-        <span className="flex items-center gap-1">
-          <Flame className="w-3.5 h-3.5" /> {course.difficulty || 'Beginner'}
-        </span>
-      </div>
-      <PlayCircle className="w-4 h-4 text-amber-500 group-hover:text-amber-400 transition-colors" />
+
+    <div className="p-5">
+      <h3 className="text-[17px] font-semibold text-zinc-100 leading-snug mb-2 group-hover:text-amber-500 transition-colors duration-200">
+        {course.title}
+      </h3>
+
+      <p className="text-sm text-zinc-600 leading-relaxed line-clamp-2">
+        {course.description}
+      </p>
+
+      {!course.image_url && (
+        <button
+          onClick={(e) => e.stopPropagation()}
+          className="opacity-0 group-hover:opacity-100 w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-600 to-yellow-500 text-black font-medium py-2.5 px-4 rounded-lg
+                    shadow-[0_0_15px_rgba(217,119,6,0.5)] hover:shadow-[0_0_25px_rgba(217,119,6,0.8)]
+                    transition-all duration-300 cursor-pointer mt-4"
+        >
+          <PlayCircle className="w-4 h-4" />
+          Continue
+        </button>
+      )}
     </div>
   </div>
 );
 
-export default CourseCard
+export default CourseCard;

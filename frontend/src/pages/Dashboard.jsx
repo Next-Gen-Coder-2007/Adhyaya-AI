@@ -1,6 +1,9 @@
 import { useAuth } from '../context/AuthContext';
+import { useState, useEffect } from 'react';
 import { BookOpen, Flame, Clock, TrendingUp, ChevronRight, Star, User, Settings } from 'lucide-react';
 import Navbar from '../components/Dashboard/Navbar';
+import RecentCourseCard from '../components/Dashboard/RecentCourseCard';
+import api from '../api/axios';
 
 const StatCard = ({ label, value, icon: Icon, accent }) => (
   <div className="relative overflow-hidden rounded-2xl bg-zinc-950 border border-zinc-900 p-6">
@@ -32,6 +35,26 @@ const EmptySlot = ({ label }) => (
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const [recentCourses, setRecentCourses] = useState([]);
+
+  useEffect(() => {
+    const fetchRecentCourses = async () => {
+      try {
+        const response = await api.get('/courses', {
+          withCredentials: true,
+        });
+
+        const latestCourses = response.data.slice(-4).reverse();
+
+        setRecentCourses(latestCourses);
+
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchRecentCourses();
+  }, []);
 
   const stats = [
     { label: 'Enrolled Courses', value: user?.stats?.enrolled ?? null, icon: BookOpen,    accent: 'bg-amber-500'  },
@@ -65,26 +88,15 @@ const Dashboard = () => {
                 All courses <ChevronRight className="w-4 h-4" />
               </a>
             </div>
-            {user?.recentCourses?.length ? (
-              <ul className="space-y-4">
-                {user.recentCourses.map((c, i) => (
-                  <li key={i} className="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
-                    <div className="w-12 h-12 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
-                      <BookOpen className="w-6 h-6 text-amber-500" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-base font-medium truncate">{c.title}</p>
-                      <div className="mt-2 h-2 rounded-full bg-zinc-900 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-amber-500 to-yellow-600"
-                          style={{ width: `${c.progress ?? 0}%` }}
-                        />
-                      </div>
-                    </div>
-                    <span className="text-sm text-zinc-600 shrink-0">{c.progress ?? 0}%</span>
-                  </li>
-                ))}
-              </ul>
+            {recentCourses.length ? (
+            <div className="space-y-3">
+              {recentCourses.map((course) => (
+                <RecentCourseCard
+                  key={course.id}
+                  course={course}
+                />
+              ))}
+            </div>
             ) : (
               <EmptySlot label="You haven't started any courses yet." />
             )}

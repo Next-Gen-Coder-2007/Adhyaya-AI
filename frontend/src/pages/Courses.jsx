@@ -4,6 +4,7 @@ import { BookOpen, Clock, Flame, Search, Filter, ChevronRight, PlayCircle, Plus,
 import Navbar from '../components/Dashboard/Navbar';
 import CourseCard from '../components/Courses/CourseCard';
 import CreateCourseModal from '../components/Courses/CreateCourseModal';
+import api from '../api/axios';
 
 const Courses = () => {
   const { user } = useAuth();
@@ -13,18 +14,20 @@ const Courses = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const fetchCourses = async () => {
+    try {
+      const response = await api.get('/courses');
+      setCourses(response.data);
+    } catch (error) {
+      console.error('Failed to fetch courses:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        setCourses(user?.courses || []);
-      } catch (error) {
-        console.error('Failed to fetch courses:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchCourses();
-  }, [user]);
+  }, []);
 
   const filteredCourses = courses.filter(course => {
     const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -34,10 +37,6 @@ const Courses = () => {
                          (filter === 'completed' && user?.completedCourses?.includes(course.id));
     return matchesSearch && matchesFilter;
   });
-
-  const handleGenerateCourse = (ytLink) => {
-    console.log('Generating course from:', ytLink);
-  };
 
   return (
     <Navbar>
@@ -124,11 +123,10 @@ const Courses = () => {
           </div>
         )}
 
-        {/* Create Course Modal */}
         <CreateCourseModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          onGenerate={handleGenerateCourse}
+          fetchCourses={fetchCourses}
         />
       </div>
     </Navbar>

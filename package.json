@@ -5,7 +5,10 @@
   "scripts": {
     "frontend": "cd frontend && npm run dev",
     "backend": "cd backend && python -m uvicorn app.main:app --reload",
-    "dev": "concurrently \"npm run backend\" \"npm run frontend\""
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "prod_frontend": "cd frontend && npm run build && npm run preview",
+    "prod_backend": "cd backend && uvicorn app.main:app --host 0.0.0 --port 8000",
+    "prod": "concurrently \"npm run prod_backend\" \"npm run prod_frontend\""
   },
   "devDependencies": {
     "concurrently": "^9.0.0"
