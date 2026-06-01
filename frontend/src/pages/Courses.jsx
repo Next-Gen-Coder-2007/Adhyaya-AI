@@ -1,36 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { BookOpen, Clock, Flame, Search, Filter, ChevronRight, PlayCircle } from 'lucide-react';
+import { BookOpen, Clock, Flame, Search, Filter, ChevronRight, PlayCircle, Plus, X } from 'lucide-react';
 import Navbar from '../components/Dashboard/Navbar';
-
-const CourseCard = ({ course, onClick }) => (
-  <div
-    onClick={onClick}
-    className="group rounded-2xl bg-zinc-950 border border-zinc-900 p-5 hover:border-amber-500/30 transition-all duration-200 cursor-pointer"
-  >
-    <div className="flex items-start justify-between mb-4">
-      <div className="w-12 h-12 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
-        <BookOpen className="w-6 h-6 text-amber-500" />
-      </div>
-      <span className="text-xs px-2 py-1 rounded-full bg-white/5 text-zinc-400">
-        {course.category || 'General'}
-      </span>
-    </div>
-    <h3 className="text-lg font-semibold text-white mb-2">{course.title}</h3>
-    <p className="text-sm text-zinc-600 mb-4 line-clamp-2">{course.description}</p>
-    <div className="flex items-center justify-between text-xs text-zinc-500">
-      <div className="flex items-center gap-3">
-        <span className="flex items-center gap-1">
-          <Clock className="w-3.5 h-3.5" /> {course.duration || '0h'}
-        </span>
-        <span className="flex items-center gap-1">
-          <Flame className="w-3.5 h-3.5" /> {course.difficulty || 'Beginner'}
-        </span>
-      </div>
-      <PlayCircle className="w-4 h-4 text-amber-500 group-hover:text-amber-400 transition-colors" />
-    </div>
-  </div>
-);
+import CourseCard from '../components/Courses/CourseCard';
+import CreateCourseModal from '../components/Courses/CreateCourseModal';
 
 const Courses = () => {
   const { user } = useAuth();
@@ -38,6 +11,7 @@ const Courses = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -61,12 +35,25 @@ const Courses = () => {
     return matchesSearch && matchesFilter;
   });
 
+  const handleGenerateCourse = (ytLink) => {
+    console.log('Generating course from:', ytLink);
+  };
+
   return (
     <Navbar>
       <div className="space-y-8">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Your Courses</h1>
-          <p className="mt-2 text-sm text-zinc-600">Explore and continue your learning journey.</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Your Courses</h1>
+            <p className="mt-2 text-sm text-zinc-600">Explore and continue your learning journey.</p>
+          </div>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 text-zinc-950 font-medium hover:bg-amber-400 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Create Course
+          </button>
         </div>
 
         <div className="flex flex-col md:flex-row gap-4">
@@ -125,7 +112,6 @@ const Courses = () => {
                 key={course.id}
                 course={course}
                 onClick={() => {
-                  // Navigate to course detail page
                 }}
               />
             ))}
@@ -137,6 +123,13 @@ const Courses = () => {
             <p className="text-sm text-zinc-600 mt-1">Try adjusting your search or filters.</p>
           </div>
         )}
+
+        {/* Create Course Modal */}
+        <CreateCourseModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onGenerate={handleGenerateCourse}
+        />
       </div>
     </Navbar>
   );
