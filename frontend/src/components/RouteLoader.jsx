@@ -4,7 +4,7 @@ import Loader from "./Loader";
 
 const RouteLoader = ({ children }) => {
   const location = useLocation();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
@@ -14,14 +14,11 @@ const RouteLoader = ({ children }) => {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [location.pathname]);
+  }, [location]);
 
-  return (
-    <>
-      {loading && <Loader />}
-      {children}
-    </>
-  );
+  if (loading) return <Loader />;
+
+  return children;
 };
 
 export default RouteLoader;

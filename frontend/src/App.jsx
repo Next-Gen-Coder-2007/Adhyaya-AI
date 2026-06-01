@@ -1,19 +1,24 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import Home from './pages/Home'
-import Login from './pages/Login'
-import Register from './pages/Register'
-import NotFound from './components/NotFound'
+import { lazy, Suspense } from 'react'
+
 import ProtectedRoute from './components/ProtectedRoute'
-import Dashboard from './pages/Dashboard'
 import RouteLoader from './components/RouteLoader'
-import Courses from './pages/Courses'
-import Profile from './pages/Profile'
-import Settings from './pages/Settings'
+import Loader from './components/Loader'
+
+const Home = lazy(() => import('./pages/Home'))
+const Login = lazy(() => import('./pages/Login'))
+const Register = lazy(() => import('./pages/Register'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Courses = lazy(() => import('./pages/Courses'))
+const Profile = lazy(() => import('./pages/Profile'))
+const Settings = lazy(() => import('./pages/Settings'))
+const NotFound = lazy(() => import('./components/NotFound'))
 
 const App = () => {
   return (
     <BrowserRouter>
-      <RouteLoader>
+    <RouteLoader>
+      <Suspense fallback={<Loader />}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
@@ -26,9 +31,10 @@ const App = () => {
             <Route path="/settings" element={<Settings />} />
           </Route>
 
-          <Route path='*' element={<NotFound/>} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
-      </RouteLoader>
+      </Suspense>
+    </RouteLoader>
     </BrowserRouter>
   )
 }

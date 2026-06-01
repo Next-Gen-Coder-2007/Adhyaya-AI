@@ -5,6 +5,18 @@ const CourseCard = ({ course, onClick }) => (
     onClick={onClick}
     className="group rounded-2xl bg-zinc-950 border border-zinc-900 p-5 hover:border-amber-500/30 transition-all duration-200 cursor-pointer"
   >
+    {course.thumbnail_url && (
+      <div className="mb-4 overflow-hidden rounded-lg">
+        <img
+          src={course.thumbnail_url}
+          alt={course.title}
+          className="w-full h-40 object-cover rounded-lg"
+          onError={(e) => {
+            e.target.src = 'https://placehold.co/600x400?text=Thumbnail+Not+Available';
+          }}
+        />
+      </div>
+    )}
     <div className="flex items-start justify-between mb-4">
       <div className="w-12 h-12 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
         <BookOpen className="w-6 h-6 text-amber-500" />
