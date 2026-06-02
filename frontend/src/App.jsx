@@ -13,6 +13,7 @@ const Courses = lazy(() => import('./pages/Courses'))
 const Profile = lazy(() => import('./pages/Profile'))
 const Settings = lazy(() => import('./pages/Settings'))
 const NotFound = lazy(() => import('./components/NotFound'))
+const CourseDetail = lazy(() => import('./components/Courses/CourseDetail'))
 
 const App = () => {
   return (
@@ -27,6 +28,7 @@ const App = () => {
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/courses" element={<Courses />} />
+            <Route path="/courses/:id" element={<CourseDetail />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/settings" element={<Settings />} />
           </Route>

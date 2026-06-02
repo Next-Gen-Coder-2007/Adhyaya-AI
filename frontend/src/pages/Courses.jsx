@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { BookOpen, Clock, Flame, Search, Filter, ChevronRight, PlayCircle, Plus, X } from 'lucide-react';
 import Navbar from '../components/Dashboard/Navbar';
@@ -12,6 +13,7 @@ const Courses = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const navigate = useNavigate();
 
   const fetchCourses = async () => {
     try {
@@ -75,6 +77,7 @@ const Courses = () => {
                 key={course.id}
                 course={course}
                 onClick={() => {
+                  navigate(`/courses/${course.id}`);
                 }}
               />
             ))}

@@ -1,65 +1,46 @@
-from fastapi import APIRouter, Depends, BackgroundTasks
+from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-
 from app.models.course import Course
 from app.models.module import Module
 from app.models.user import User
+from app.schemas.course import CourseCreate, CourseResponse
+from app.middleware.auth import get_current_user
+from app.ai.agents.curriculum_agent import generate_course_data
 
-from app.schemas.course import (
-    CourseCreate,
-    CourseResponse
-)
-
-from app.middleware.auth import (
-    get_current_user
-)
-
-from app.ai.services.youtube_service import (
-    get_transcript
-)
-
-from app.ai.agents.curriculum_agent import (
-    generate_modules
-)
-
-router = APIRouter(
-    prefix="/courses",
-    tags=["Courses"]
-)
-
+router = APIRouter(prefix="/courses", tags=["Courses"])
 
 def generate_course_modules(
     course_id: int,
     youtube_url: str,
-    db: Session
+    db: Session,
+    is_playlist: bool = False
 ):
-    course = db.query(Course).filter(
-        Course.id == course_id
-    ).first()
+    course = db.query(Course).filter(Course.id == course_id).first()
+    if not course:
+        return
 
-    transcript = get_transcript(youtube_url)
+    result = generate_course_data(youtube_url, is_playlist)
 
-    result = generate_modules(transcript)
+    if result.get("title"):
+        course.title = result["title"]
+    if result.get("description"):
+        course.description = result["description"]
 
-    for index, item in enumerate(result["modules"]):
-
-
+    for item in result["modules"]:
         module = Module(
             title=item["title"],
+            start_time=item.get("start_time"),
+            end_time=item.get("end_time"),
+            video_url=item.get("video_url"),
             course_id=course.id
         )
-
         db.add(module)
 
-
     course.status = "completed"
-
     db.commit()
-
     db.refresh(course)
-
 
 @router.post("/", response_model=CourseResponse)
 def create_course(
@@ -68,27 +49,26 @@ def create_course(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-
     new_course = Course(
         title=course.title,
         description=course.description,
         image_url=course.image_url,
         youtube_url=course.youtube_url,
         user_id=current_user.id,
+        is_playlist=course.is_playlist,
         status="generating"
     )
 
     db.add(new_course)
-
     db.commit()
-
     db.refresh(new_course)
 
     background_tasks.add_task(
         generate_course_modules,
         new_course.id,
         course.youtube_url,
-        db
+        db,
+        course.is_playlist
     )
 
     return new_course
@@ -98,8 +78,20 @@ def get_my_courses(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    courses = db.query(Course).filter(
-        Course.user_id == current_user.id
-    ).all()
+    return db.query(Course).filter(Course.user_id == current_user.id).all()
 
-    return courses
+@router.get("/{course_id}", response_model=CourseResponse)
+def get_course(
+    course_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    course = db.query(Course).filter(
+        Course.id == course_id,
+        Course.user_id == current_user.id
+    ).first()
+
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    return course

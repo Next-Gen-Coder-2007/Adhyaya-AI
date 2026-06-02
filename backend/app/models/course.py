@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey
+from sqlalchemy import Boolean, Column, Integer, String, Text, ForeignKey
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -15,6 +15,7 @@ class Course(Base):
     youtube_url = Column(String, nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     status = Column(String, default="processing")
+    is_playlist = Column(Boolean, default=False)  # Default to False
 
     owner = relationship("User", back_populates="courses")
     modules = relationship(

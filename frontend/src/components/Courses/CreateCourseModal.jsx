@@ -8,6 +8,7 @@ const CreateCourseModal = ({ isOpen, onClose, fetchCourses }) => {
   const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [isPlaylist, setIsPlaylist] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
@@ -15,11 +16,12 @@ const CreateCourseModal = ({ isOpen, onClose, fetchCourses }) => {
       setThumbnailUrl('');
       setTitle('');
       setDescription('');
+      setIsPlaylist(false);
     }
   }, [isOpen]);
 
   const extractThumbnailUrl = async (url) => {
-    if (!url) return { thumbnailUrl: '', title: '', description: '' };
+    if (!url) return { thumbnailUrl: '', title: '', description: '', isPlaylist: false };
 
     const videoRegex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/;
     const videoMatch = url.match(videoRegex);
@@ -34,10 +36,10 @@ const CreateCourseModal = ({ isOpen, onClose, fetchCourses }) => {
         const data = await response.data;
         const videoTitle = data.items?.[0]?.snippet?.title || 'Untitled Video';
         const videoDescription = data.items?.[0]?.snippet?.description || 'No description available';
-        return { thumbnailUrl, title: videoTitle, description: videoDescription };
+        return { thumbnailUrl, title: videoTitle, description: videoDescription, isPlaylist: false };
       } catch (err) {
         console.error(err);
-        return { thumbnailUrl, title: 'Untitled Video', description: 'No description available' };
+        return { thumbnailUrl, title: 'Untitled Video', description: 'No description available', isPlaylist: false };
       }
     }
 
@@ -57,22 +59,23 @@ const CreateCourseModal = ({ isOpen, onClose, fetchCourses }) => {
           data.items?.[0]?.snippet?.thumbnails?.high?.url ||
           '';
         const playlistDescription = data.items?.[0]?.snippet?.description || 'No description available';
-        return { thumbnailUrl, title: playlistTitle, description: playlistDescription };
+        return { thumbnailUrl, title: playlistTitle, description: playlistDescription, isPlaylist: true };
       } catch (err) {
         console.error(err);
-        return { thumbnailUrl: '', title: 'Untitled Playlist', description: 'No description available' };
+        return { thumbnailUrl: '', title: 'Untitled Playlist', description: 'No description available', isPlaylist: false };
       }
     }
 
-    return { thumbnailUrl: '', title: '', description: '' };
+    return { thumbnailUrl: '', title: '', description: '', isPlaylist: false };
   };
 
   useEffect(() => {
     const loadThumbnailAndTitle = async () => {
-      const { thumbnailUrl, title, description } = await extractThumbnailUrl(ytLink);
+      const { thumbnailUrl, title, description, isPlaylist } = await extractThumbnailUrl(ytLink);
       setThumbnailUrl(thumbnailUrl);
       setTitle(title);
       setDescription(description);
+      setIsPlaylist(isPlaylist);
     };
 
     if (ytLink) {
@@ -81,6 +84,7 @@ const CreateCourseModal = ({ isOpen, onClose, fetchCourses }) => {
       setThumbnailUrl('');
       setTitle('');
       setDescription('');
+      setIsPlaylist(false);
     }
   }, [ytLink]);
 
@@ -93,6 +97,7 @@ const CreateCourseModal = ({ isOpen, onClose, fetchCourses }) => {
         title,
         description,
         youtube_url: ytLink,
+        is_playlist: isPlaylist,
         status: "generating"
       };
 
@@ -103,6 +108,7 @@ const CreateCourseModal = ({ isOpen, onClose, fetchCourses }) => {
       setThumbnailUrl('');
       setTitle('');
       setDescription('');
+      setIsPlaylist(false);
       onClose();
     } catch (error) {
       console.error('Error creating course:', error);
