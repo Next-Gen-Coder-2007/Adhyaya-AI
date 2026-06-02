@@ -92,6 +92,8 @@ const CreateCourseModal = ({ isOpen, onClose, fetchCourses }) => {
         image_url: thumbnailUrl,
         title,
         description,
+        youtube_url: ytLink,
+        status: "generating"
       };
 
       const response = await api.post('/courses', courseData);

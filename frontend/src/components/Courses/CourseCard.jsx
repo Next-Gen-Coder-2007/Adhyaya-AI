@@ -51,6 +51,22 @@ const CourseCard = ({ course, onClick }) => (
           Continue
         </button>
       )}
+
+      {
+        course.status === "generating" && (
+          <div className="mt-2 text-xs text-amber-400">
+            Generating modules...
+          </div>
+        )
+      }
+
+      {
+        course.status === "completed" && (
+          <div className="mt-2 text-xs text-green-400">
+            Ready
+          </div>
+        )
+      }
     </div>
   </div>
 );

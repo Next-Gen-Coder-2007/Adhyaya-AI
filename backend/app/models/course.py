@@ -12,7 +12,13 @@ class Course(Base):
     title = Column(String, nullable=False)
     description = Column(Text, nullable=False)
     image_url = Column(String, nullable=True)
-
+    youtube_url = Column(String, nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"))
+    status = Column(String, default="processing")
 
     owner = relationship("User", back_populates="courses")
+    modules = relationship(
+        "Module",
+        back_populates="course",
+        cascade="all, delete"
+    )

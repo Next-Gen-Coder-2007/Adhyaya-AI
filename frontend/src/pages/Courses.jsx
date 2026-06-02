@@ -10,7 +10,6 @@ const Courses = () => {
   const { user } = useAuth();
   const [courses, setCourses] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -32,10 +31,7 @@ const Courses = () => {
   const filteredCourses = courses.filter(course => {
     const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          course.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = filter === 'all' ||
-                         (filter === 'enrolled' && user?.enrolledCourses?.includes(course.id)) ||
-                         (filter === 'completed' && user?.completedCourses?.includes(course.id));
-    return matchesSearch && matchesFilter;
+    return matchesSearch;
   });
 
   return (
@@ -65,38 +61,6 @@ const Courses = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 focus:border-amber-500 focus:outline-none text-sm text-white transition-colors"
             />
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setFilter('all')}
-              className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
-                filter === 'all'
-                  ? 'bg-amber-500/10 text-amber-500 border border-amber-500/30'
-                  : 'bg-zinc-900 text-zinc-500 border border-zinc-800 hover:border-zinc-700'
-              }`}
-            >
-              All
-            </button>
-            <button
-              onClick={() => setFilter('enrolled')}
-              className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
-                filter === 'enrolled'
-                  ? 'bg-amber-500/10 text-amber-500 border border-amber-500/30'
-                  : 'bg-zinc-900 text-zinc-500 border border-zinc-800 hover:border-zinc-700'
-              }`}
-            >
-              Enrolled
-            </button>
-            <button
-              onClick={() => setFilter('completed')}
-              className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
-                filter === 'completed'
-                  ? 'bg-amber-500/10 text-amber-500 border border-amber-500/30'
-                  : 'bg-zinc-900 text-zinc-500 border border-zinc-800 hover:border-zinc-700'
-              }`}
-            >
-              Completed
-            </button>
           </div>
         </div>
 
