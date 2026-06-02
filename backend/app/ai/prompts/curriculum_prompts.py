@@ -45,4 +45,6 @@ Return format:
 
 Content:
 {content}
+
+this is the original content that is being analyzed to generate the course title and description. It can be a transcript, playlist information, or any relevant data about the course.
 """

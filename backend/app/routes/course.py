@@ -21,7 +21,7 @@ def generate_course_modules(
     if not course:
         return
 
-    result = generate_course_data(youtube_url, is_playlist)
+    result = generate_course_data(course.title, course.description, youtube_url, is_playlist)
 
     if result.get("title"):
         course.title = result["title"]

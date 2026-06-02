@@ -4,10 +4,10 @@ from app.ai.services.llm_service import llm
 from app.ai.services.youtube_service import get_transcript, get_playlist_videos
 from app.ai.prompts.curriculum_prompts import COURSE_METADATA_PROMPT, CURRICULUM_PROMPT
 
-def _generate_course_metadata(content: str) -> dict:
+def _generate_course_metadata(content: dict) -> dict:
     prompt = ChatPromptTemplate.from_template(COURSE_METADATA_PROMPT)
     chain = prompt | llm
-    response = chain.invoke({"content": content[:15000]})
+    response = chain.invoke({"content": json.dumps(content)})
 
     try:
         return json.loads(response.content)
@@ -27,9 +27,9 @@ def _generate_modules_from_transcript(transcript: str) -> dict:
     except:
         return {"modules": []}
 
-def generate_course_data(youtube_url: str, is_playlist: bool = False) -> dict:
+def generate_course_data(title: str, description: str, youtube_url: str, is_playlist: bool = False) -> dict:
     if not youtube_url:
-        return {"title": "", "description": "", "modules": []}
+        return {"title": title, "description": description, "modules": []}
 
     if is_playlist:
         playlist_videos = get_playlist_videos(youtube_url)
@@ -37,14 +37,15 @@ def generate_course_data(youtube_url: str, is_playlist: bool = False) -> dict:
             {"title": video["title"], "video_url": video["url"]}
             for video in playlist_videos
         ]
-        content = f"Playlist: {playlist_videos[0]['title']}" if playlist_videos else ""
     else:
         transcript = get_transcript(youtube_url)
         modules_result = _generate_modules_from_transcript(transcript)
         modules = modules_result.get("modules", [])
-        content = transcript[:15000] if transcript else ""
-
-    metadata = _generate_course_metadata(content)
+    course_content = {
+        "title": title,
+        "description": description
+    }
+    metadata = _generate_course_metadata(course_content)
 
     return {
         "title": metadata.get("title", ""),
