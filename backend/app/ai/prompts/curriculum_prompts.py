@@ -1,50 +1,67 @@
-CURRICULUM_PROMPT = """
-You are an expert curriculum planner.
-Analyze the following YouTube course transcript and create a structured curriculum.
-
-Rules:
-- Generate 5 to 12 modules
-- Each module should represent a major topic
-- Include start and end timestamps (in seconds) for each module
-- Keep titles concise and professional
-- Return ONLY valid JSON
-- Do not add markdown
-- Do not explain anything
-
-Return format:
-{{
-  "modules": [
-    {{
-      "title": "Introduction to HTML",
-      "start_time": 0,
-      "end_time": 300
-    }}
-  ]
-}}
-
-Transcript:
-{transcript}
-"""
-
 COURSE_METADATA_PROMPT = """
 You are an expert curriculum planner.
-Analyze the following content and generate a concise, professional title and description for the course.
+
+Generate a professional
+course title and description.
 
 Rules:
-- Title should be concise and descriptive
-- Description should be 2-3 sentences long
 - Return ONLY valid JSON
-- Do not add markdown
-- Do not explain anything
+- No markdown
+- No explanation
 
-Return format:
+Format:
 {{
-  "title": "Course Title",
-  "description": "Course Description"
+  "title": "Modern React Development",
+  "description": "Learn React from beginner to advanced."
 }}
 
 Content:
 {content}
+"""
 
-this is the original content that is being analyzed to generate the course title and description. It can be a transcript, playlist information, or any relevant data about the course.
+MODULE_GENERATION_PROMPT = """
+You are an expert curriculum planner.
+
+Generate structured learning modules
+from the transcript.
+
+RULES:
+
+1. Cover the ENTIRE chunk duration.
+2. Modules must be chronological.
+3. No overlaps.
+4. No huge gaps.
+5. Every module needs:
+   - title
+   - start_time
+   - end_time
+6. Module titles should describe
+   the actual topic.
+7. Keep modules balanced.
+8. Use ONLY the provided chunk range.
+9. Return ONLY valid JSON.
+
+Expected JSON format:
+
+{{
+  "modules": [
+    {{
+      "title": "Introduction",
+      "start_time": 0,
+      "end_time": 120
+    }}
+  ]
+}}
+
+Chunk Start:
+{chunk_start}
+
+Chunk End:
+{chunk_end}
+
+Target Modules:
+{target_modules}
+
+Transcript:
+{transcript}
 """
