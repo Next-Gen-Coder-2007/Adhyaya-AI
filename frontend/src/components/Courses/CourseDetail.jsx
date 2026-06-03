@@ -1,17 +1,63 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Clock, PlayCircle, ArrowLeft, CheckCircle, Loader2, Sparkles, AlertCircle } from 'lucide-react';
+import {
+  Clock,
+  PlayCircle,
+  ArrowLeft,
+  CheckCircle,
+  Loader2,
+  Sparkles,
+  AlertCircle,
+  BookOpen,
+  FileText,
+  HelpCircle,
+  Film,
+  ChevronDown,
+  ChevronRight
+} from 'lucide-react';
 import api from '../../api/axios';
 import Navbar from '../../components/Dashboard/Navbar';
+
+// Helper functions
+const formatTime = (seconds) => {
+  if (!seconds) return 'N/A';
+  const date = new Date(0);
+  date.setSeconds(seconds);
+  return date.toISOString().substr(11, 8);
+};
+
+const getSectionIcon = (type) => {
+  const icons = {
+    video: <Film className="w-4 h-4 text-blue-400" />,
+    quiz: <HelpCircle className="w-4 h-4 text-green-400" />,
+    assignment: <FileText className="w-4 h-4 text-purple-400" />,
+    summary: <BookOpen className="w-4 h-4 text-amber-400" />,
+    default: <CheckCircle className="w-4 h-4 text-zinc-400" />
+  };
+  return icons[type] || icons.default;
+};
+
+const getSectionTypeLabel = (type) => {
+  const labels = {
+    video: 'Video',
+    quiz: 'Quiz',
+    assignment: 'Assignment',
+    summary: 'Summary & Resources',
+    default: 'Content'
+  };
+  return labels[type] || labels.default;
+};
 
 const CourseDetail = () => {
   const { id } = useParams();
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [expandedModule, setExpandedModule] = useState(null);
+  const [expandedSections, setExpandedSections] = useState({});
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
+  // Fetch course data
   const fetchCourse = async () => {
     try {
       setLoading(true);
@@ -26,6 +72,7 @@ const CourseDetail = () => {
     }
   };
 
+  // Poll for course status updates
   useEffect(() => {
     fetchCourse();
     const interval = setInterval(() => {
@@ -36,17 +83,20 @@ const CourseDetail = () => {
     return () => clearInterval(interval);
   }, [id, course?.status]);
 
-  const formatTime = (seconds) => {
-    if (!seconds) return 'N/A';
-    const date = new Date(0);
-    date.setSeconds(seconds);
-    return date.toISOString().substr(11, 8);
-  };
-
+  // Toggle module expansion
   const toggleModule = (moduleId) => {
     setExpandedModule(expandedModule === moduleId ? null : moduleId);
   };
 
+  // Toggle section expansion
+  const toggleSection = (moduleId, sectionId) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [`${moduleId}-${sectionId}`]: !prev[`${moduleId}-${sectionId}`]
+    }));
+  };
+
+  // Render loading state
   if (loading && !course) {
     return (
       <Navbar>
@@ -58,6 +108,7 @@ const CourseDetail = () => {
     );
   }
 
+  // Render error state
   if (error) {
     return (
       <Navbar>
@@ -76,6 +127,7 @@ const CourseDetail = () => {
     );
   }
 
+  // Render not found state
   if (!course) {
     return (
       <Navbar>
@@ -94,6 +146,7 @@ const CourseDetail = () => {
     );
   }
 
+  // Render generating state
   if (course.status === 'generating') {
     return (
       <Navbar>
@@ -123,6 +176,7 @@ const CourseDetail = () => {
     );
   }
 
+  // Render empty modules state
   if (course.modules.length === 0) {
     return (
       <Navbar>
@@ -145,9 +199,11 @@ const CourseDetail = () => {
     );
   }
 
+  // Main render: Course details
   return (
     <Navbar>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Back button */}
         <button
           onClick={() => navigate('/courses')}
           className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors mb-6"
@@ -157,11 +213,13 @@ const CourseDetail = () => {
           <span className="text-sm font-medium">Back to Courses</span>
         </button>
 
+        {/* Course layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left: Course info */}
           <div className="lg:col-span-1 space-y-6">
             <div className="relative rounded-xl overflow-hidden shadow-2xl aspect-video">
               <img
-                src={course.image_url}
+                src={course.image_url || 'https://via.placeholder.com/400x225?text=Course+Image'}
                 alt={course.title}
                 className="w-full h-full object-cover"
               />
@@ -190,7 +248,7 @@ const CourseDetail = () => {
             </div>
           </div>
 
-          {/* Right Column: Modules */}
+          {/* Right: Modules and sections */}
           <div className="lg:col-span-2 space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl sm:text-3xl font-bold text-white">Course Modules</h2>
@@ -198,12 +256,14 @@ const CourseDetail = () => {
                 {course.modules.length} {course.modules.length === 1 ? 'Module' : 'Modules'}
               </span>
             </div>
+
             <div className="space-y-4">
-              {course.modules.map((module, index) => (
+              {course.modules.map((module, moduleIndex) => (
                 <div
                   key={module.id}
                   className="bg-zinc-900/50 border border-zinc-800 rounded-xl overflow-hidden transition-all hover:border-zinc-700"
                 >
+                  {/* Module header */}
                   <button
                     onClick={() => toggleModule(module.id)}
                     className="w-full p-4 text-left flex items-center justify-between hover:bg-zinc-800/50 transition-colors"
@@ -212,7 +272,7 @@ const CourseDetail = () => {
                   >
                     <div className="flex items-center gap-4">
                       <div className="flex-shrink-0 w-8 h-8 bg-amber-500/10 text-amber-400 rounded-full flex items-center justify-center font-bold">
-                        {index + 1}
+                        {moduleIndex + 1}
                       </div>
                       <div>
                         <h3 className="text-lg font-semibold text-white">{module.title}</h3>
@@ -236,38 +296,180 @@ const CourseDetail = () => {
                           <PlayCircle className="w-5 h-5" />
                         </a>
                       )}
-                      <svg
-                        className={`w-5 h-5 text-zinc-500 transition-transform ${expandedModule === module.id ? 'rotate-180' : ''}`}
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
+                      <ChevronDown
+                        className={`w-5 h-5 text-zinc-500 transition-transform ${
+                          expandedModule === module.id ? 'rotate-180' : ''
+                        }`}
+                      />
                     </div>
                   </button>
+
+                  {/* Module content (sections) */}
                   <div
                     id={`module-content-${module.id}`}
-                    className={`px-4 pb-4 overflow-hidden transition-all duration-300 ${expandedModule === module.id ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
+                    className={`overflow-hidden transition-all duration-300 ${
+                      expandedModule === module.id ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'
+                    }`}
                   >
-                    <div className="pt-4 border-t border-zinc-800">
-                      <p className="text-zinc-400 text-sm">
-                        {module.start_time && module.end_time
-                          ? `This module covers content from ${formatTime(module.start_time)} to ${formatTime(module.end_time)}.`
-                          : 'Click the play button to watch this module.'}
-                      </p>
-                      {module.video_url && (
-                        <div className="mt-4">
-                          <a
-                            href={module.video_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-amber-400 text-sm font-medium rounded-lg transition-colors"
-                          >
-                            <PlayCircle className="w-4 h-4" />
-                            Watch Full Video
-                          </a>
+                    <div className="px-4 pb-4">
+                      {module.sections?.length > 0 ? (
+                        <div className="space-y-2">
+                          {module.sections.map((section, sectionIndex) => (
+                            <div
+                              key={`${module.id}-${sectionIndex}`}
+                              className="bg-zinc-800/50 rounded-lg overflow-hidden"
+                            >
+                              {/* Section header */}
+                              <button
+                                onClick={() => toggleSection(module.id, sectionIndex)}
+                                className="w-full p-3 text-left flex items-center justify-between hover:bg-zinc-700/30 transition-colors"
+                                aria-expanded={expandedSections[`${module.id}-${sectionIndex}`]}
+                                aria-controls={`section-content-${module.id}-${sectionIndex}`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="flex-shrink-0">{getSectionIcon(section.type)}</div>
+                                  <div>
+                                    <h4 className="text-sm font-medium text-white">{section.title}</h4>
+                                    <p className="text-xs text-zinc-500">
+                                      {getSectionTypeLabel(section.type)}
+                                      {section.start_time && section.end_time && (
+                                        <span className="ml-2">
+                                          ({formatTime(section.start_time)} - {formatTime(section.end_time)})
+                                        </span>
+                                      )}
+                                    </p>
+                                  </div>
+                                </div>
+                                <ChevronRight
+                                  className={`w-4 h-4 text-zinc-500 transition-transform ${
+                                    expandedSections[`${module.id}-${sectionIndex}`] ? 'rotate-90' : ''
+                                  }`}
+                                />
+                              </button>
+
+                              {/* Section content */}
+                              <div
+                                id={`section-content-${module.id}-${sectionIndex}`}
+                                className={`px-3 pb-3 overflow-hidden transition-all duration-200 ${
+                                  expandedSections[`${module.id}-${sectionIndex}`]
+                                    ? 'max-h-[500px] opacity-100'
+                                    : 'max-h-0 opacity-0'
+                                }`}
+                              >
+                                <div className="pt-2 border-t border-zinc-700">
+                                  {section.type === 'video' && (
+                                    <div className="text-zinc-400 text-sm">
+                                      <p className="mb-2">{section.content}</p>
+                                      {module.video_url && (
+                                        <a
+                                          href={module.video_url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-amber-400 text-xs font-medium rounded-lg transition-colors"
+                                        >
+                                          <PlayCircle className="w-3.5 h-3.5" />
+                                          Watch Video
+                                        </a>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {section.type === 'quiz' && (
+                                    <div className="text-zinc-400 text-sm space-y-3">
+                                      <p className="mb-2">Test your knowledge with this quiz:</p>
+                                      {section.content?.quiz?.map((question, qIndex) => (
+                                        <div key={qIndex} className="bg-zinc-700/50 p-3 rounded-lg">
+                                          <p className="font-medium text-white mb-1">
+                                            {qIndex + 1}. {question.question}
+                                          </p>
+                                          {question.type === 'MCQ' && (
+                                            <ul className="list-disc list-inside space-y-1 text-zinc-300 text-xs">
+                                              {question.options?.map((option, oIndex) => (
+                                                <li key={oIndex}>{option}</li>
+                                              ))}
+                                            </ul>
+                                          )}
+                                          <p className="text-xs text-green-400 mt-1">
+                                            Correct Answer: {question.correct_answer}
+                                          </p>
+                                          <p className="text-xs text-zinc-500 mt-1">
+                                            Explanation: {question.explanation}
+                                          </p>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {section.type === 'assignment' && (
+                                    <div className="text-zinc-400 text-sm space-y-3">
+                                      <p className="mb-2">Complete the following assignment:</p>
+                                      {section.content?.assignments?.map((assignment, aIndex) => (
+                                        <div key={aIndex} className="bg-zinc-700/50 p-3 rounded-lg">
+                                          <h5 className="font-medium text-white mb-1">{assignment.title}</h5>
+                                          <p className="text-xs text-zinc-300 mb-2">{assignment.description}</p>
+                                          <p className="text-xs text-zinc-500 mb-1">Difficulty: {assignment.difficulty}</p>
+                                          <div className="text-xs text-zinc-400">
+                                            <p className="mb-1">Tasks:</p>
+                                            <ul className="list-disc list-inside space-y-0.5">
+                                              {assignment.tasks?.map((task, tIndex) => (
+                                                <li key={tIndex}>{task}</li>
+                                              ))}
+                                            </ul>
+                                          </div>
+                                          <div className="text-xs text-zinc-400 mt-2">
+                                            <p className="mb-1">Evaluation Criteria:</p>
+                                            <ul className="list-disc list-inside space-y-0.5">
+                                              {assignment.evaluation_criteria?.map((criteria, cIndex) => (
+                                                <li key={cIndex}>{criteria}</li>
+                                              ))}
+                                            </ul>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {section.type === 'summary' && (
+                                    <div className="text-zinc-400 text-sm space-y-3">
+                                      <p className="mb-2">{section.content?.summary}</p>
+                                      {section.content?.key_takeaways?.length > 0 && (
+                                        <div className="bg-zinc-700/50 p-3 rounded-lg">
+                                          <h5 className="font-medium text-white mb-2">Key Takeaways:</h5>
+                                          <ul className="list-disc list-inside space-y-1 text-xs text-zinc-300">
+                                            {section.content.key_takeaways.map((takeaway, tIndex) => (
+                                              <li key={tIndex}>{takeaway}</li>
+                                            ))}
+                                          </ul>
+                                        </div>
+                                      )}
+                                      {section.content?.resources?.length > 0 && (
+                                        <div className="bg-zinc-700/50 p-3 rounded-lg">
+                                          <h5 className="font-medium text-white mb-2">Useful Resources:</h5>
+                                          <div className="space-y-2">
+                                            {section.content.resources.map((resource, rIndex) => (
+                                              <a
+                                                key={rIndex}
+                                                href={resource.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex items-center gap-2 text-xs text-amber-400 hover:text-amber-300 transition-colors"
+                                              >
+                                                <BookOpen className="w-4 h-4" />
+                                                <span>{resource.title}</span>
+                                              </a>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
+                      ) : (
+                        <p className="text-zinc-500 text-sm py-2">No sections available for this module.</p>
                       )}
                     </div>
                   </div>

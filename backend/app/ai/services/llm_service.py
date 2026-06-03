@@ -7,7 +7,7 @@ from langchain_groq import ChatGroq
 load_dotenv()
 
 gemini_llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash-lite",
+    model="gemini-2.5-flash",
     temperature=0.3,
     google_api_key=os.getenv("GOOGLE_API_KEY")
 )

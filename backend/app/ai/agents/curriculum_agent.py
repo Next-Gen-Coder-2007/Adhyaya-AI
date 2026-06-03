@@ -3,11 +3,16 @@ from langchain_core.prompts import ChatPromptTemplate
 from app.ai.services.llm_service import generate_with_gemini, generate_with_groq
 from app.ai.services.youtube_service import get_transcript, get_playlist_videos
 from app.ai.prompts.curriculum_prompts import COURSE_METADATA_PROMPT, MODULE_GENERATION_PROMPT
+from app.ai.agents.quiz_agent import QuizAgent
+from app.ai.agents.assignment_agent import AssignmentAgent
+from app.ai.agents.summary_agent import SummaryAgent
 
+quiz_agent = QuizAgent()
+assignment_agent = AssignmentAgent()
+summary_agent = SummaryAgent()
 
 def clean_json(text: str):
     return text.strip().replace("```json", "").replace("```", "").strip()
-
 
 def _generate_course_metadata(content: dict):
     prompt = ChatPromptTemplate.from_template(COURSE_METADATA_PROMPT)
@@ -19,6 +24,65 @@ def _generate_course_metadata(content: dict):
         print(f"Metadata Error: {e}")
         return {"title": "", "description": ""}
 
+def _generate_sections_for_module(module: dict, transcript_chunk: list[dict]) -> list[dict]:
+    sections = []
+    module_duration = module["end_time"] - module["start_time"]
+    section_duration = module_duration / 7  # Aim for ~7 sections
+
+    sub_chunks = []
+    current_chunk = []
+    current_time = module["start_time"]
+
+    for item in transcript_chunk:
+        if item["start"] >= module["end_time"]:
+            break
+        if item["start"] >= current_time + section_duration and current_chunk:
+            sub_chunks.append(current_chunk)
+            current_chunk = []
+            current_time += section_duration
+        current_chunk.append(item)
+
+    if current_chunk:
+        sub_chunks.append(current_chunk)
+
+    for i, chunk in enumerate(sub_chunks):
+        if not chunk:
+            continue
+        start = chunk[0]["start"]
+        end = chunk[-1]["end"]
+        text = "\n".join([c["text"] for c in chunk])
+
+        sections.append({
+            "type": "video",
+            "title": f"Section {i+1}: {module['title']}",
+            "start_time": round(start, 2),
+            "end_time": round(end, 2),
+            "content": text
+        })
+
+    quiz = quiz_agent.generate_quiz(module.get("content", ""))
+    assignment = assignment_agent.generate_assignment(module.get("content", ""))
+    summary = summary_agent.generate_summary(module.get("content", ""))
+
+    sections.append({
+        "type": "quiz",
+        "title": f"Quiz: {module['title']}",
+        "content": quiz
+    })
+
+    sections.append({
+        "type": "assignment",
+        "title": f"Assignment: {module['title']}",
+        "content": assignment
+    })
+
+    sections.append({
+        "type": "summary",
+        "title": f"Summary & Resources: {module['title']}",
+        "content": summary
+    })
+
+    return sections
 
 def _generate_modules_from_transcript(transcript: list[dict]):
     if not transcript:
@@ -93,10 +157,17 @@ def _generate_modules_from_transcript(transcript: list[dict]):
                     e = min(end, float(m.get("end_time", end)))
                     if e <= s:
                         continue
+
+                    sections = _generate_sections_for_module(
+                        {"title": title, "start_time": s, "end_time": e, "content": text},
+                        chunk
+                    )
+
                     generated.append({
                         "title": title,
                         "start_time": round(s, 2),
-                        "end_time": round(e, 2)
+                        "end_time": round(e, 2),
+                        "sections": sections
                     })
                 except Exception as e:
                     print(f"Module Parse Error: {e}")
@@ -108,8 +179,8 @@ def _generate_modules_from_transcript(transcript: list[dict]):
                 continue
 
     generated.sort(key=lambda x: x["start_time"])
-
     cleaned, seen = [], set()
+
     for m in generated:
         t = m["title"].lower().strip()
         if t in seen:
@@ -130,19 +201,20 @@ def _generate_modules_from_transcript(transcript: list[dict]):
                 final.append({
                     "title": "Continuation",
                     "start_time": round(m["end_time"], 2),
-                    "end_time": round(cleaned[i + 1]["start_time"], 2)
+                    "end_time": round(cleaned[i + 1]["start_time"], 2),
+                    "sections": []
                 })
 
     if not final:
         final = [{
             "title": "Complete Course",
             "start_time": 0,
-            "end_time": round(total_duration, 2)
+            "end_time": round(total_duration, 2),
+            "sections": []
         }]
 
     print(f"\nGenerated Modules: {len(final)}")
     return {"modules": final}
-
 
 def generate_course_data(title: str, description: str, youtube_url: str, is_playlist: bool = False):
     if not youtube_url:
@@ -150,7 +222,21 @@ def generate_course_data(title: str, description: str, youtube_url: str, is_play
 
     if is_playlist:
         videos = get_playlist_videos(youtube_url)
-        modules = [{"title": v["title"], "video_url": v["url"]} for v in videos]
+        modules = []
+        for video in videos:
+            modules.append({
+                "title": video["title"],
+                "video_url": video["url"],
+                "sections": [
+                    {
+                        "type": "video",
+                        "title": f"Watch: {video['title']}",
+                        "content": f"Watch the full video: {video['title']}",
+                        "start_time": 0,
+                        "end_time": None
+                    }
+                ]
+            })
     else:
         transcript = get_transcript(youtube_url)
         modules = _generate_modules_from_transcript(transcript).get("modules", [])

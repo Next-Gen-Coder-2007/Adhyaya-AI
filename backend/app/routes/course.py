@@ -1,13 +1,15 @@
 from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
+from typing import List
 
 from app.core.database import get_db
 from app.models.course import Course
 from app.models.module import Module
-from app.models.user import User
+from app.models.section import Section
 from app.schemas.course import CourseCreate, CourseResponse
 from app.middleware.auth import get_current_user
 from app.ai.agents.curriculum_agent import generate_course_data
+from app.models.user import User
 
 router = APIRouter(prefix="/courses", tags=["Courses"])
 
@@ -28,15 +30,27 @@ def generate_course_modules(
     if result.get("description"):
         course.description = result["description"]
 
-    for item in result["modules"]:
+    for module_data in result["modules"]:
         module = Module(
-            title=item["title"],
-            start_time=item.get("start_time"),
-            end_time=item.get("end_time"),
-            video_url=item.get("video_url"),
+            title=module_data["title"],
+            start_time=module_data.get("start_time"),
+            end_time=module_data.get("end_time"),
+            video_url=module_data.get("video_url"),
             course_id=course.id
         )
         db.add(module)
+        db.flush()  # Get module ID
+
+        for section_data in module_data.get("sections", []):
+            section = Section(
+                type=section_data["type"],
+                title=section_data["title"],
+                start_time=section_data.get("start_time"),
+                end_time=section_data.get("end_time"),
+                content=section_data.get("content"),
+                module_id=module.id
+            )
+            db.add(section)
 
     course.status = "completed"
     db.commit()
@@ -73,7 +87,7 @@ def create_course(
 
     return new_course
 
-@router.get("/", response_model=list[CourseResponse])
+@router.get("/", response_model=List[CourseResponse])
 def get_my_courses(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)

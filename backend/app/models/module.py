@@ -21,3 +21,5 @@ class Module(Base):
         "Course",
         back_populates="modules"
     )
+
+    sections = relationship('Section', back_populates='module', cascade="all, delete-orphan")

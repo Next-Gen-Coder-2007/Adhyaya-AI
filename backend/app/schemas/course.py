@@ -19,7 +19,7 @@ class CourseResponse(BaseModel):
     image_url: str
     youtube_url: str
     status: str
-    modules: List["ModuleResponse"] = []
+    modules: List[ModuleResponse] = []
 
     class Config:
         from_attributes = True

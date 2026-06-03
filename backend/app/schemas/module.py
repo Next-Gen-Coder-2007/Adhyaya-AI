@@ -1,4 +1,5 @@
-# app/schemas/module.py
+from typing import List
+from app.schemas.section import SectionResponse
 from pydantic import BaseModel
 
 class ModuleResponse(BaseModel):
@@ -7,6 +8,7 @@ class ModuleResponse(BaseModel):
     start_time: float | None = None
     end_time: float | None = None
     video_url: str | None = None
+    sections: List[SectionResponse] = []
 
     class Config:
         from_attributes = True
