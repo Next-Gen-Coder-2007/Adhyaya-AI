@@ -71,7 +71,10 @@ const Navbar = ({ children }) => {
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           <p className="px-3 mb-2 text-[10px] uppercase tracking-widest text-zinc-700">Menu</p>
           {navItems.map(item => {
-            const isActive = location.pathname === item.path;
+            const isActive =
+              item.path === '/dashboard'
+                ? location.pathname === item.path
+                : location.pathname.startsWith(item.path);
             return (
               <NavLink
                 key={item.name}
