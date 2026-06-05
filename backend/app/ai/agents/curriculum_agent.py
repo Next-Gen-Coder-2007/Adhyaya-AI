@@ -1,4 +1,5 @@
 import json
+import re
 from langchain_core.prompts import ChatPromptTemplate
 from app.ai.services.llm_service import generate_with_gemini, generate_with_groq
 from app.ai.services.youtube_service import get_transcript, get_playlist_videos
@@ -12,7 +13,13 @@ assignment_agent = AssignmentAgent()
 summary_agent = SummaryAgent()
 
 def clean_json(text: str):
-    return text.strip().replace("```json", "").replace("```", "").strip()
+    if not text:
+        return ""
+    text = text.replace("```json", "").replace("```", "").strip()
+    match = re.search(r'\{.*\}', text, re.DOTALL)
+    if not match:
+        raise ValueError("No valid JSON found in response")
+    return match.group(0)
 
 def _generate_course_metadata(content: dict):
     prompt = ChatPromptTemplate.from_template(COURSE_METADATA_PROMPT)

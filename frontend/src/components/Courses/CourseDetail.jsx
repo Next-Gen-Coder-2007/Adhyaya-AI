@@ -19,34 +19,23 @@ import {
 import api from '../../api/axios';
 import Navbar from '../../components/Dashboard/Navbar';
 
-// Robust time formatter that correctly handles 0
+// --- Helper Functions ---
 const formatTime = (seconds) => {
   if (seconds === null || seconds === undefined || isNaN(seconds)) return null;
-  
   const totalSeconds = Math.floor(Number(seconds));
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const secs = totalSeconds % 60;
-
   const paddedMinutes = String(minutes).padStart(2, '0');
   const paddedSecs = String(secs).padStart(2, '0');
-
-  if (hours > 0) {
-    return `${String(hours).padStart(2, '0')}:${paddedMinutes}:${paddedSecs}`;
-  }
-  return `${paddedMinutes}:${paddedSecs}`;
+  return hours > 0 ? `${String(hours).padStart(2, '0')}:${paddedMinutes}:${paddedSecs}` : `${paddedMinutes}:${paddedSecs}`;
 };
 
-// Render format helper for the timeline ranges
 const renderTimeRange = (startTime, endTime) => {
   const start = formatTime(startTime);
   const end = formatTime(endTime);
-
-  if (start !== null && end !== null && start !== end) {
-    return `${start} - ${end}`;
-  } else if (start !== null) {
-    return `Starts at ${start}`;
-  }
+  if (start && end && start !== end) return `${start} - ${end}`;
+  if (start) return `Starts at ${start}`;
   return 'Timeline N/A';
 };
 
@@ -72,6 +61,7 @@ const getSectionTypeLabel = (type) => {
   return labels[type] || labels.default;
 };
 
+// --- Main Component ---
 const CourseDetail = () => {
   const { id } = useParams();
   const [course, setCourse] = useState(null);
@@ -79,14 +69,17 @@ const CourseDetail = () => {
   const [expandedModules, setExpandedModules] = useState({});
   const [activeSection, setActiveSection] = useState(null);
   const [error, setError] = useState(null);
+  const [quizAnswers, setQuizAnswers] = useState({});
+  const [quizSubmitted, setQuizSubmitted] = useState(false);
+  const [quizScore, setQuizScore] = useState(null);
   const navigate = useNavigate();
 
+  // --- Fetch Course Data ---
   const fetchCourse = async () => {
     try {
       setLoading(true);
       const response = await api.get(`/courses/${id}`);
       setCourse(response.data);
-      
       if (response.data?.modules?.length > 0) {
         setExpandedModules({ [response.data.modules[0].id]: true });
         if (response.data.modules[0].sections?.length > 0) {
@@ -113,20 +106,51 @@ const CourseDetail = () => {
   useEffect(() => {
     let interval;
     if (course?.status === 'generating') {
-      interval = setInterval(() => {
-        fetchCourse();
-      }, 5000);
+      interval = setInterval(fetchCourse, 5000);
     }
     return () => clearInterval(interval);
   }, [course?.status]);
 
-  const toggleModule = (moduleId) => {
-    setExpandedModules(prev => ({
+  // --- Quiz Logic ---
+  const handleAnswerSelect = (moduleId, sectionIndex, questionIndex, selectedOption) => {
+    setQuizAnswers(prev => ({
       ...prev,
-      [moduleId]: !prev[moduleId]
+      [`${moduleId}-${sectionIndex}-${questionIndex}`]: selectedOption
     }));
   };
 
+  const calculateQuizScore = () => {
+    if (!activeSection?.content?.quiz) return 0;
+    let score = 0;
+    activeSection.content.quiz.forEach((question, qIndex) => {
+      const userAnswer = quizAnswers[`${activeSection.moduleId}-${activeSection.sectionIndex}-${qIndex}`];
+      const correctAnswer = question.correct_answer.trim();
+      const isCorrect =
+        question.type === 'MCQ' || question.type === 'True/False'
+          ? userAnswer === correctAnswer
+          : userAnswer?.trim() === correctAnswer;
+      if (isCorrect) score += 1;
+    });
+    return Math.round((score / activeSection.content.quiz.length) * 100);
+  };
+
+  const handleSubmitQuiz = () => {
+    const score = calculateQuizScore();
+    setQuizScore(score);
+    setQuizSubmitted(true);
+  };
+
+  const resetQuiz = () => {
+    setQuizAnswers({});
+    setQuizSubmitted(false);
+    setQuizScore(null);
+  };
+
+  const toggleModule = (moduleId) => {
+    setExpandedModules(prev => ({ ...prev, [moduleId]: !prev[moduleId] }));
+  };
+
+  // --- Loading & Error States ---
   if (loading && !course) {
     return (
       <Navbar>
@@ -171,10 +195,10 @@ const CourseDetail = () => {
     );
   }
 
+  // --- Main Render ---
   return (
     <Navbar>
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        
         <div className="flex items-center justify-between mb-6 border-b border-zinc-800 pb-4">
           <button onClick={() => navigate(`/courses/${id}`)} className="flex items-center gap-2 text-zinc-500 hover:text-zinc-300 transition-colors text-xs font-semibold uppercase tracking-wider">
             <ArrowLeft className="w-4 h-4" />
@@ -184,8 +208,9 @@ const CourseDetail = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          {/* --- Main Content Area --- */}
           <div className="lg:col-span-2 space-y-6">
-            
+            {/* Video Section */}
             {activeSection?.type === 'video' && (
               <div className="bg-zinc-950 rounded-xl overflow-hidden border border-zinc-800 aspect-video relative flex flex-col items-center justify-center p-6 shadow-xl">
                 <Film className="w-12 h-12 text-zinc-800 mb-4 animate-pulse" />
@@ -207,7 +232,8 @@ const CourseDetail = () => {
               </div>
             )}
 
-            {activeSection && activeSection.type !== 'video' && (
+            {/* Quiz Section */}
+            {activeSection?.type === 'quiz' && (
               <div className="bg-zinc-900/20 border border-zinc-800/80 rounded-xl p-6 min-h-[450px] flex flex-col justify-between shadow-sm">
                 <div>
                   <div className="flex items-start justify-between border-b border-zinc-800 pb-4 mb-6">
@@ -222,107 +248,245 @@ const CourseDetail = () => {
                     </div>
                   </div>
 
-                  {activeSection.type === 'quiz' && (
-                    <div className="space-y-4">
-                      {activeSection.content?.quiz?.map((question, qIndex) => (
-                        <div key={qIndex} className="bg-zinc-950/40 border border-zinc-800/60 p-5 rounded-xl space-y-4">
-                          <p className="font-semibold text-zinc-200 text-sm">{qIndex + 1}. {question.question}</p>
+                  <div className="space-y-4">
+                    {activeSection.content?.quiz?.map((question, qIndex) => {
+                      const questionKey = `${activeSection.moduleId}-${activeSection.sectionIndex}-${qIndex}`;
+                      const userAnswer = quizAnswers[questionKey];
+
+                      return (
+                        <div key={qIndex} className="bg-zinc-950/40 border border-zinc-800/60 p-5 rounded-xl space-y-3">
+                          <p className="font-semibold text-zinc-200 text-sm">
+                            {qIndex + 1}. {question.question}
+                          </p>
+
+                          {/* MCQ Questions */}
                           {question.type === 'MCQ' && (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-1">
-                              {question.options?.map((option, oIndex) => (
-                                <div key={oIndex} className="bg-zinc-900/30 border border-zinc-800/60 p-3 rounded-lg text-xs text-zinc-400 flex items-center gap-2.5">
-                                  <div className="w-1.5 h-1.5 rounded-full bg-zinc-700" />
-                                  <span>{option}</span>
-                                </div>
-                              ))}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {question.options?.map((option, oIndex) => {
+                                const isSelected = userAnswer === option;
+                                const isCorrect = question.correct_answer === option;
+                                const isIncorrect = isSelected && !isCorrect;
+                                const showFeedback = quizSubmitted;
+
+                                return (
+                                  <button
+                                    key={oIndex}
+                                    onClick={() => !quizSubmitted && handleAnswerSelect(activeSection.moduleId, activeSection.sectionIndex, qIndex, option)}
+                                    disabled={quizSubmitted}
+                                    className={`p-3 rounded-lg text-xs text-left transition-all flex items-center gap-2
+                                      ${isSelected ? 'bg-amber-500/10 border border-amber-500' : 'bg-zinc-900/30 border border-zinc-800/60'}
+                                      ${showFeedback && isCorrect ? 'bg-green-500/10 border border-green-500' : ''}
+                                      ${showFeedback && isIncorrect ? 'bg-red-500/10 border border-red-500' : ''}
+                                    `}
+                                  >
+                                    <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0
+                                      ${isSelected ? 'bg-amber-500' :
+                                      showFeedback && isCorrect ? 'bg-green-500' :
+                                      showFeedback && isIncorrect ? 'bg-red-500' : 'bg-zinc-700'}`}
+                                    />
+                                    <span className={showFeedback && isCorrect ? 'text-green-400' : ''}>{option}</span>
+                                  </button>
+                                );
+                              })}
                             </div>
                           )}
-                          <div className="mt-2 pt-3 border-t border-zinc-900/80 text-xs space-y-1">
-                            <span className="text-amber-500 font-bold block">✔ Solution Option: {question.correct_answer}</span>
-                            <span className="text-zinc-500 block leading-relaxed font-normal italic">Context: {question.explanation}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
 
-                  {activeSection.type === 'assignment' && (
-                    <div className="space-y-4">
-                      {activeSection.content?.assignments?.map((assignment, aIndex) => (
-                        <div key={aIndex} className="space-y-4">
-                          <div className="bg-zinc-950/40 p-4 border border-zinc-800/60 rounded-xl space-y-2">
-                            <h4 className="text-sm font-bold text-zinc-200">{assignment.title}</h4>
-                            <p className="text-xs text-zinc-400 leading-relaxed font-normal">{assignment.description}</p>
-                            <span className="inline-block text-[10px] font-mono font-bold text-amber-500 px-2 py-0.5 bg-zinc-900 border border-zinc-800 rounded">
-                              Tier Index: {assignment.difficulty}
-                            </span>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="bg-zinc-950/20 border border-zinc-800/40 p-4 rounded-xl space-y-2">
-                              <h5 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Operational Target Milestones</h5>
-                              <ul className="list-disc list-inside text-xs text-zinc-500 space-y-1 pl-0.5">
-                                {assignment.tasks?.map((task, idx) => <li key={idx} className="truncate">{task}</li>)}
-                              </ul>
-                            </div>
-                            <div className="bg-zinc-950/20 border border-zinc-800/40 p-4 rounded-xl space-y-2">
-                              <h5 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Evaluation Rules Summary</h5>
-                              <ul className="list-disc list-inside text-xs text-zinc-500 space-y-1 pl-0.5">
-                                {assignment.evaluation_criteria?.map((criteria, idx) => <li key={idx} className="truncate">{criteria}</li>)}
-                              </ul>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                          {/* True/False Questions */}
+                          {question.type === 'True/False' && (
+                            <div className="flex gap-2">
+                              {['True', 'False'].map((option) => {
+                                const isSelected = userAnswer === option;
+                                const isCorrect = question.correct_answer === option;
+                                const isIncorrect = isSelected && !isCorrect;
+                                const showFeedback = quizSubmitted;
 
-                  {activeSection.type === 'summary' && (
-                    <div className="space-y-4">
-                      <div className="bg-zinc-950/40 border border-zinc-800/60 p-4 rounded-xl">
-                        <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-2">Synopsis Overview</h4>
-                        <p className="text-zinc-300 text-xs leading-relaxed font-normal">{activeSection.content?.summary}</p>
+                                return (
+                                  <button
+                                    key={option}
+                                    onClick={() => !quizSubmitted && handleAnswerSelect(activeSection.moduleId, activeSection.sectionIndex, qIndex, option)}
+                                    disabled={quizSubmitted}
+                                    className={`px-4 py-2 rounded-lg text-xs transition-all
+                                      ${isSelected ? 'bg-amber-500/10 border border-amber-500' : 'bg-zinc-900/30 border border-zinc-800/60'}
+                                      ${showFeedback && isCorrect ? 'bg-green-500/10 border border-green-500' : ''}
+                                      ${showFeedback && isIncorrect ? 'bg-red-500/10 border border-red-500' : ''}
+                                    `}
+                                  >
+                                    {option}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {/* Short Answer Questions */}
+                          {question.type === 'Short Answer' && (
+                            <input
+                              type="text"
+                              value={userAnswer || ''}
+                              onChange={(e) => !quizSubmitted && handleAnswerSelect(activeSection.moduleId, activeSection.sectionIndex, qIndex, e.target.value)}
+                              disabled={quizSubmitted}
+                              className="w-full p-2 bg-zinc-900/30 border border-zinc-800/60 rounded-lg text-xs text-zinc-200 focus:outline-none focus:border-amber-500"
+                              placeholder="Your answer..."
+                            />
+                          )}
+
+                          {/* Feedback (Shown After Submission) */}
+                          {quizSubmitted && (
+                            <div className="mt-2 pt-3 border-t border-zinc-900/80 text-xs space-y-1">
+                              <span className="text-amber-500 font-bold block">✔ Correct Answer: {question.correct_answer}</span>
+                              <span className="text-zinc-500 block leading-relaxed font-normal italic">
+                                Explanation: {question.explanation}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {/* Submit / Retake Buttons */}
+                    {!quizSubmitted ? (
+                      <button
+                        onClick={handleSubmitQuiz}
+                        className="mt-6 w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold rounded-lg transition-colors shadow-lg shadow-amber-500/5"
+                      >
+                        Submit Quiz
+                      </button>
+                    ) : (
+                      <div className="mt-6 p-4 bg-zinc-950/40 border border-zinc-800/60 rounded-xl">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-semibold text-zinc-200">Your Score:</span>
+                          <span className={`text-xl font-bold ${quizScore >= 70 ? 'text-green-400' : quizScore >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+                            {quizScore}%
+                          </span>
+                        </div>
+                        <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full ${quizScore >= 70 ? 'bg-green-500' : quizScore >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
+                            style={{ width: `${quizScore}%` }}
+                          />
+                        </div>
+                        <button
+                          onClick={resetQuiz}
+                          className="mt-4 w-full py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-medium rounded-lg transition-colors"
+                        >
+                          Retake Quiz
+                        </button>
                       </div>
-
-                      {activeSection.content?.key_takeaways?.length > 0 && (
-                        <div className="bg-zinc-950/20 border border-zinc-800/40 p-4 rounded-xl space-y-2">
-                          <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Core Takeaways Ledger</h4>
-                          <ul className="space-y-1.5">
-                            {activeSection.content.key_takeaways.map((takeaway, tIndex) => (
-                              <li key={tIndex} className="text-xs text-zinc-400 flex items-start gap-2">
-                                <span className="text-amber-500 font-bold">•</span>
-                                <span className="leading-relaxed">{takeaway}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {activeSection.content?.resources?.length > 0 && (
-                        <div className="bg-zinc-950/20 border border-zinc-800/40 p-4 rounded-xl space-y-3">
-                          <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Reference Attachments</h4>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {activeSection.content.resources.map((res, rIndex) => (
-                              <a
-                                key={rIndex}
-                                href={res.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center justify-between p-3 bg-zinc-900/60 border border-zinc-800 text-xs rounded-lg transition-all hover:border-zinc-700 group"
-                              >
-                                <span className="truncate font-medium text-zinc-300 group-hover:text-zinc-100">{res.title}</span>
-                                <ExternalLink className="w-3.5 h-3.5 text-zinc-600 flex-shrink-0 ml-2" />
-                              </a>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
             )}
 
+            {/* Assignment Section */}
+            {activeSection?.type === 'assignment' && (
+              <div className="bg-zinc-900/20 border border-zinc-800/80 rounded-xl p-6 min-h-[450px] flex flex-col justify-between shadow-sm">
+                <div>
+                  <div className="flex items-start justify-between border-b border-zinc-800 pb-4 mb-6">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest block">
+                        {getSectionTypeLabel(activeSection.type)}
+                      </span>
+                      <h2 className="text-xl font-bold text-zinc-100 tracking-tight">{activeSection.title}</h2>
+                    </div>
+                    <div className="p-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-400">
+                      {getSectionIcon(activeSection.type)}
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    {activeSection.content?.assignments?.map((assignment, aIndex) => (
+                      <div key={aIndex} className="space-y-4">
+                        <div className="bg-zinc-950/40 p-4 border border-zinc-800/60 rounded-xl space-y-2">
+                          <h4 className="text-sm font-bold text-zinc-200">{assignment.title}</h4>
+                          <p className="text-xs text-zinc-400 leading-relaxed font-normal">{assignment.description}</p>
+                          <span className="inline-block text-[10px] font-mono font-bold text-amber-500 px-2 py-0.5 bg-zinc-900 border border-zinc-800 rounded">
+                            Tier Index: {assignment.difficulty}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="bg-zinc-950/20 border border-zinc-800/40 p-4 rounded-xl space-y-2">
+                            <h5 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Operational Target Milestones</h5>
+                            <ul className="list-disc list-inside text-xs text-zinc-500 space-y-1 pl-0.5">
+                              {assignment.tasks?.map((task, idx) => <li key={idx} className="truncate">{task}</li>)}
+                            </ul>
+                          </div>
+                          <div className="bg-zinc-950/20 border border-zinc-800/40 p-4 rounded-xl space-y-2">
+                            <h5 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Evaluation Rules Summary</h5>
+                            <ul className="list-disc list-inside text-xs text-zinc-500 space-y-1 pl-0.5">
+                              {assignment.evaluation_criteria?.map((criteria, idx) => <li key={idx} className="truncate">{criteria}</li>)}
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Summary Section */}
+            {activeSection?.type === 'summary' && (
+              <div className="bg-zinc-900/20 border border-zinc-800/80 rounded-xl p-6 min-h-[450px] flex flex-col justify-between shadow-sm">
+                <div>
+                  <div className="flex items-start justify-between border-b border-zinc-800 pb-4 mb-6">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest block">
+                        {getSectionTypeLabel(activeSection.type)}
+                      </span>
+                      <h2 className="text-xl font-bold text-zinc-100 tracking-tight">{activeSection.title}</h2>
+                    </div>
+                    <div className="p-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-400">
+                      {getSectionIcon(activeSection.type)}
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="bg-zinc-950/40 border border-zinc-800/60 p-4 rounded-xl">
+                      <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-2">Synopsis Overview</h4>
+                      <p className="text-zinc-300 text-xs leading-relaxed font-normal">{activeSection.content?.summary}</p>
+                    </div>
+
+                    {activeSection.content?.key_takeaways?.length > 0 && (
+                      <div className="bg-zinc-950/20 border border-zinc-800/40 p-4 rounded-xl space-y-2">
+                        <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Core Takeaways Ledger</h4>
+                        <ul className="space-y-1.5">
+                          {activeSection.content.key_takeaways.map((takeaway, tIndex) => (
+                            <li key={tIndex} className="text-xs text-zinc-400 flex items-start gap-2">
+                              <span className="text-amber-500 font-bold">•</span>
+                              <span className="leading-relaxed">{takeaway}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {activeSection.content?.resources?.length > 0 && (
+                      <div className="bg-zinc-950/20 border border-zinc-800/40 p-4 rounded-xl space-y-3">
+                        <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Reference Attachments</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {activeSection.content.resources.map((res, rIndex) => (
+                            <a
+                              key={rIndex}
+                              href={res.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center justify-between p-3 bg-zinc-900/60 border border-zinc-800 text-xs rounded-lg transition-all hover:border-zinc-700 group"
+                            >
+                              <span className="truncate font-medium text-zinc-300 group-hover:text-zinc-100">{res.title}</span>
+                              <ExternalLink className="w-3.5 h-3.5 text-zinc-600 flex-shrink-0 ml-2" />
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Video Context (for video sections) */}
             {activeSection?.type === 'video' && (
               <div className="bg-zinc-900/10 border border-zinc-800 rounded-xl p-5 space-y-1">
                 <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Lecture Outline Context</h3>
@@ -331,6 +495,7 @@ const CourseDetail = () => {
             )}
           </div>
 
+          {/* --- Sidebar --- */}
           <div className="bg-zinc-900/20 border border-zinc-800 rounded-xl overflow-hidden flex flex-col shadow-sm">
             <div className="p-4 border-b border-zinc-800 bg-zinc-900/40 flex items-center justify-between">
               <h3 className="font-bold text-xs text-zinc-400 tracking-wider uppercase">Syllabus Index</h3>
@@ -344,7 +509,6 @@ const CourseDetail = () => {
                 const isExpanded = !!expandedModules[module.id];
                 return (
                   <div key={module.id} className="bg-zinc-900/5">
-                    
                     <button
                       onClick={() => toggleModule(module.id)}
                       className="w-full p-4 text-left flex items-start justify-between gap-3 hover:bg-zinc-800/10 transition-colors group"
@@ -375,10 +539,13 @@ const CourseDetail = () => {
                           return (
                             <button
                               key={sIdx}
-                              onClick={() => setActiveSection({ moduleId: module.id, sectionIndex: sIdx, ...section })}
+                              onClick={() => {
+                                setActiveSection({ moduleId: module.id, sectionIndex: sIdx, ...section });
+                                resetQuiz(); // Reset quiz when switching sections
+                              }}
                               className={`w-full p-3.5 text-left flex items-start gap-3 text-xs transition-all ${
-                                isSectionActive 
-                                  ? 'bg-zinc-800/30 border-l-2 border-amber-500 text-zinc-100 pl-3' 
+                                isSectionActive
+                                  ? 'bg-zinc-800/30 border-l-2 border-amber-500 text-zinc-100 pl-3'
                                   : 'hover:bg-zinc-800/10 text-zinc-400 hover:text-zinc-300'
                               }`}
                             >
@@ -403,13 +570,11 @@ const CourseDetail = () => {
                         })}
                       </div>
                     )}
-
                   </div>
                 );
               })}
             </div>
           </div>
-
         </div>
       </div>
     </Navbar>
