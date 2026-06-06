@@ -65,3 +65,29 @@ Target Modules:
 Transcript:
 {transcript}
 """
+SECTION_TITLE_PROMPT = """
+You are an expert educational content creator.
+
+Generate EXACTLY {num_sections} concise section titles for the following transcript sections.
+Return ONLY the titles, one per line, in the same order as the sections.
+Do NOT include any additional text, explanations, or formatting.
+
+RULES FOR EACH TITLE:
+- Maximum 8 words
+- Must sound like a lesson title
+- Describe the actual topic of the section
+- Avoid generic names (e.g., "Introduction", "Overview", "Section 1")
+- No quotes
+- No numbering
+- No extra symbols or delimiters
+
+MODULE TITLE:
+{module_title}
+
+NUMBER OF SECTIONS: {num_sections}
+
+SECTIONS:
+---
+{content}
+---
+"""
