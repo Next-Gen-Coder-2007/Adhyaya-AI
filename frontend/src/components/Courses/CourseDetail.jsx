@@ -16,8 +16,10 @@ import {
   ChevronUp,
   ExternalLink
 } from 'lucide-react';
+import YouTube from 'react-youtube';
 import api from '../../api/axios';
 import Navbar from '../../components/Dashboard/Navbar';
+import ChatPanel from './ChatPanel';
 
 // --- Helper Functions ---
 const formatTime = (seconds) => {
@@ -61,6 +63,34 @@ const getSectionTypeLabel = (type) => {
   return labels[type] || labels.default;
 };
 
+// --- Improved YouTube Video ID Extractor ---
+const getYouTubeVideoId = (url) => {
+  if (!url) return null;
+  try {
+    // Handle standard URLs (e.g., https://www.youtube.com/watch?v=VIDEO_ID)
+    if (url.includes('youtube.com/watch')) {
+      const urlObj = new URL(url);
+      return urlObj.searchParams.get('v') || null;
+    }
+    // Handle short URLs (e.g., https://youtu.be/VIDEO_ID)
+    else if (url.includes('youtu.be/')) {
+      return url.split('youtu.be/')[1]?.split('?')[0]?.split('&')[0] || null;
+    }
+    // Handle embed URLs (e.g., https://www.youtube.com/embed/VIDEO_ID)
+    else if (url.includes('youtube.com/embed/')) {
+      return url.split('youtube.com/embed/')[1]?.split('?')[0]?.split('&')[0] || null;
+    }
+    // Handle direct video paths (e.g., https://www.youtube.com/VIDEO_ID)
+    else if (url.includes('youtube.com/')) {
+      const parts = url.split('youtube.com/')[1]?.split('?')[0]?.split('&')[0];
+      return parts?.length > 0 ? parts[0] : null;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
 // --- Main Component ---
 const CourseDetail = () => {
   const { id } = useParams();
@@ -72,12 +102,16 @@ const CourseDetail = () => {
   const [quizAnswers, setQuizAnswers] = useState({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [quizScore, setQuizScore] = useState(null);
+  const [player, setPlayer] = useState(null);
+  const [playerReady, setPlayerReady] = useState(false);
+  const [playerError, setPlayerError] = useState(null);
   const navigate = useNavigate();
 
   // --- Fetch Course Data ---
   const fetchCourse = async () => {
     try {
       setLoading(true);
+      setError(null);
       const response = await api.get(`/courses/${id}`);
       setCourse(response.data);
       if (response.data?.modules?.length > 0) {
@@ -90,7 +124,6 @@ const CourseDetail = () => {
           });
         }
       }
-      setError(null);
     } catch (err) {
       console.error('Failed to fetch course:', err);
       setError('Failed to load course. Please try again later.');
@@ -111,6 +144,50 @@ const CourseDetail = () => {
     return () => clearInterval(interval);
   }, [course?.status]);
 
+  // --- YouTube Player Logic ---
+  const onPlayerReady = (event) => {
+    setPlayer(event.target);
+    setPlayerReady(true);
+    setPlayerError(null);
+  };
+
+  const onPlayerStateChange = (event) => {
+    // Optional: Handle player state changes (e.g., pause, play, end)
+  };
+
+  const onPlayerError = (event) => {
+    console.error("YouTube Player Error:", event);
+    setPlayerError("Failed to load video. Please try again later.");
+  };
+
+  const seekTo = (seconds) => {
+    if (player && !isNaN(seconds)) {
+      player.seekTo(seconds, true);
+    }
+  };
+
+  // --- FIX: Guard against null `course` in useEffect ---
+  useEffect(() => {
+    if (activeSection?.type === 'video' && course) {
+      const module = course.modules?.find(m => m.id === activeSection.moduleId);
+      const videoUrl = module?.video_url || (course.modules?.length === 1 ? course.youtube_url : null);
+      const newVideoId = getYouTubeVideoId(videoUrl);
+      const currentVideoId = player?.getVideoUrl() ? getYouTubeVideoId(player.getVideoUrl()) : null;
+
+      if (newVideoId && newVideoId !== currentVideoId) {
+        setPlayerReady(false);
+        setPlayerError(null);
+      }
+    }
+  }, [activeSection, course, player]);
+
+  // Sync player with active section
+  useEffect(() => {
+    if (activeSection?.type === 'video' && playerReady && activeSection.start_time) {
+      seekTo(activeSection.start_time);
+    }
+  }, [activeSection, playerReady]);
+
   // --- Quiz Logic ---
   const handleAnswerSelect = (moduleId, sectionIndex, questionIndex, selectedOption) => {
     setQuizAnswers(prev => ({
@@ -124,7 +201,7 @@ const CourseDetail = () => {
     let score = 0;
     activeSection.content.quiz.forEach((question, qIndex) => {
       const userAnswer = quizAnswers[`${activeSection.moduleId}-${activeSection.sectionIndex}-${qIndex}`];
-      const correctAnswer = question.correct_answer.trim();
+      const correctAnswer = question.correct_answer?.trim();
       const isCorrect =
         question.type === 'MCQ' || question.type === 'True/False'
           ? userAnswer === correctAnswer
@@ -169,7 +246,10 @@ const CourseDetail = () => {
           <AlertCircle className="w-10 h-10 text-red-500 mb-4" />
           <h2 className="text-lg font-bold text-zinc-200">Error Loading Course</h2>
           <p className="mt-1 text-sm text-zinc-500">{error}</p>
-          <button onClick={fetchCourse} className="mt-6 px-4 py-2 bg-zinc-800 text-white text-xs font-medium rounded-lg hover:bg-zinc-700">
+          <button
+            onClick={fetchCourse}
+            className="mt-6 px-4 py-2 bg-zinc-800 text-white text-xs font-medium rounded-lg hover:bg-zinc-700"
+          >
             Retry
           </button>
         </div>
@@ -187,7 +267,10 @@ const CourseDetail = () => {
           </div>
           <h2 className="text-xl font-bold text-white mt-6">Generating Course Structure</h2>
           <p className="mt-2 text-sm text-zinc-400">Processing media timelines into structural nodes...</p>
-          <button onClick={() => navigate('/courses')} className="mt-6 px-4 py-2 bg-zinc-800 text-white text-xs font-medium rounded-lg">
+          <button
+            onClick={() => navigate('/courses')}
+            className="mt-6 px-4 py-2 bg-zinc-800 text-white text-xs font-medium rounded-lg"
+          >
             ← Back to Courses
           </button>
         </div>
@@ -200,7 +283,10 @@ const CourseDetail = () => {
     <Navbar>
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex items-center justify-between mb-6 border-b border-zinc-800 pb-4">
-          <button onClick={() => navigate(`/courses/${id}`)} className="flex items-center gap-2 text-zinc-500 hover:text-zinc-300 transition-colors text-xs font-semibold uppercase tracking-wider">
+          <button
+            onClick={() => navigate(`/courses/${id}`)}
+            className="flex items-center gap-2 text-zinc-500 hover:text-zinc-300 transition-colors text-xs font-semibold uppercase tracking-wider"
+          >
             <ArrowLeft className="w-4 h-4" />
             <span>Course Overview</span>
           </button>
@@ -213,22 +299,112 @@ const CourseDetail = () => {
             {/* Video Section */}
             {activeSection?.type === 'video' && (
               <div className="bg-zinc-950 rounded-xl overflow-hidden border border-zinc-800 aspect-video relative flex flex-col items-center justify-center p-6 shadow-xl">
-                <Film className="w-12 h-12 text-zinc-800 mb-4 animate-pulse" />
-                <p className="text-zinc-300 font-semibold text-sm mb-1">{activeSection.title}</p>
+                {(() => {
+                  if (!course) {
+                    return (
+                      <div className="text-center text-zinc-400">
+                        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+                        <p className="text-sm mt-2">Loading video...</p>
+                      </div>
+                    );
+                  }
+
+                  const module = course.modules?.find(m => m.id === activeSection.moduleId);
+                  if (!module) {
+                    return (
+                      <div className="text-center text-zinc-400">
+                        <AlertCircle className="w-8 h-8 mx-auto mb-2" />
+                        <p className="text-sm">Module not found</p>
+                      </div>
+                    );
+                  }
+
+                  // --- FIX: Resolve videoUrl for both playlists and single-video courses ---
+                  let videoUrl = null;
+                  if (module.video_url) {
+                    videoUrl = module.video_url;
+                  } else if (course.modules?.length === 1 && course.youtube_url) {
+                    videoUrl = course.youtube_url;
+                  } else {
+                    const firstVideoModule = course.modules?.find(m => m.video_url);
+                    videoUrl = firstVideoModule?.video_url;
+                  }
+
+                  const videoId = getYouTubeVideoId(videoUrl);
+
+                  if (!videoUrl) {
+                    return (
+                      <div className="text-center text-zinc-400">
+                        <Film className="w-8 h-8 mx-auto mb-2" />
+                        <p className="text-sm">No video URL found for this course.</p>
+                      </div>
+                    );
+                  }
+
+                  if (!videoId) {
+                    return (
+                      <div className="text-center text-zinc-400">
+                        <AlertCircle className="w-8 h-8 mx-auto mb-2" />
+                        <p className="text-sm">Invalid YouTube URL: {videoUrl}</p>
+                        <p className="text-xs mt-1 text-zinc-500 truncate max-w-xs">
+                          Expected format: https://www.youtube.com/watch?v=VIDEO_ID
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  if (playerError) {
+                    return (
+                      <div className="text-center text-zinc-400">
+                        <AlertCircle className="w-8 h-8 mx-auto mb-2" />
+                        <p className="text-sm">{playerError}</p>
+                        <button
+                          onClick={() => {
+                            setPlayerError(null);
+                            setPlayerReady(false);
+                          }}
+                          className="mt-2 px-3 py-1 bg-zinc-800 text-xs rounded-lg hover:bg-zinc-700"
+                        >
+                          Retry
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <>
+                      <YouTube
+                        videoId={videoId}
+                        opts={{
+                          height: '100%',
+                          width: '100%',
+                          playerVars: {
+                            autoplay: 0,
+                            start: activeSection.start_time || 0,
+                            origin: window.location.origin,
+                            enablejsapi: 1,
+                          },
+                        }}
+                        onReady={onPlayerReady}
+                        onStateChange={onPlayerStateChange}
+                        onError={onPlayerError}
+                        className="w-full h-full"
+                      />
+                      {!playerReady && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/80">
+                          <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+
+                <p className="text-zinc-300 font-semibold text-sm mb-1 mt-4">
+                  {activeSection.title}
+                </p>
                 <p className="text-[11px] font-mono text-zinc-500 mb-6">
                   Segment Duration: {renderTimeRange(activeSection.start_time, activeSection.end_time)}
                 </p>
-                {course.modules.find(m => m.id === activeSection.moduleId)?.video_url && (
-                  <a
-                    href={course.modules.find(m => m.id === activeSection.moduleId).video_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold rounded-lg transition-colors shadow-lg shadow-amber-500/5"
-                  >
-                    <PlayCircle className="w-4 h-4" />
-                    Launch Video Resource
-                  </a>
-                )}
               </div>
             )}
 
@@ -379,7 +555,7 @@ const CourseDetail = () => {
             )}
 
             {/* Assignment Section */}
-            {activeSection?.type === 'assignment' && (
+            {activeSection?.type === 'assignment' && course && (
               <div className="bg-zinc-900/20 border border-zinc-800/80 rounded-xl p-6 min-h-[450px] flex flex-col justify-between shadow-sm">
                 <div>
                   <div className="flex items-start justify-between border-b border-zinc-800 pb-4 mb-6">
@@ -426,8 +602,7 @@ const CourseDetail = () => {
               </div>
             )}
 
-            {/* Summary Section */}
-            {activeSection?.type === 'summary' && (
+            {activeSection?.type === 'summary' && course && (
               <div className="bg-zinc-900/20 border border-zinc-800/80 rounded-xl p-6 min-h-[450px] flex flex-col justify-between shadow-sm">
                 <div>
                   <div className="flex items-start justify-between border-b border-zinc-800 pb-4 mb-6">
@@ -486,7 +661,6 @@ const CourseDetail = () => {
               </div>
             )}
 
-            {/* Video Context (for video sections) */}
             {activeSection?.type === 'video' && (
               <div className="bg-zinc-900/10 border border-zinc-800 rounded-xl p-5 space-y-1">
                 <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Lecture Outline Context</h3>
@@ -495,17 +669,16 @@ const CourseDetail = () => {
             )}
           </div>
 
-          {/* --- Sidebar --- */}
           <div className="bg-zinc-900/20 border border-zinc-800 rounded-xl overflow-hidden flex flex-col shadow-sm">
             <div className="p-4 border-b border-zinc-800 bg-zinc-900/40 flex items-center justify-between">
               <h3 className="font-bold text-xs text-zinc-400 tracking-wider uppercase">Syllabus Index</h3>
               <span className="text-[10px] font-mono text-zinc-500 border border-zinc-800 px-2 py-0.5 rounded bg-zinc-950">
-                {course.modules.length} Blocks
+                {course?.modules?.length || 0} Blocks
               </span>
             </div>
 
             <div className="divide-y divide-zinc-800">
-              {course.modules.map((module, mIdx) => {
+              {course?.modules?.map((module, mIdx) => {
                 const isExpanded = !!expandedModules[module.id];
                 return (
                   <div key={module.id} className="bg-zinc-900/5">
@@ -541,7 +714,10 @@ const CourseDetail = () => {
                               key={sIdx}
                               onClick={() => {
                                 setActiveSection({ moduleId: module.id, sectionIndex: sIdx, ...section });
-                                resetQuiz(); // Reset quiz when switching sections
+                                resetQuiz();
+                                if (section.type === 'video') {
+                                  seekTo(section.start_time);
+                                }
                               }}
                               className={`w-full p-3.5 text-left flex items-start gap-3 text-xs transition-all ${
                                 isSectionActive
@@ -577,6 +753,7 @@ const CourseDetail = () => {
           </div>
         </div>
       </div>
+      <ChatPanel courseId={id} courseStatus={course?.status}/>
     </Navbar>
   );
 };

@@ -16,7 +16,7 @@ class Course(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     status = Column(String, default="processing")
     is_playlist = Column(Boolean, default=False)  # Default to False
-
+    chunks = relationship("Chunk", back_populates="course")
     owner = relationship("User", back_populates="courses")
     modules = relationship(
         "Module",
