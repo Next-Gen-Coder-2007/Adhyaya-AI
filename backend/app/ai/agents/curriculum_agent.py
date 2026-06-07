@@ -94,7 +94,15 @@ def _generate_sections_for_module(module: Dict, transcript_chunk: List[Dict]) ->
     module_content = module.get("content", "")
 
     content_length = len(module_content)
-    num_sections = max(1, min(10, content_length // 1000))  # Min 1, Max 10 sections
+    # Generate sections based on duration instead of chars
+    if module_duration <= 600:          # <= 10 mins
+        num_sections = 2
+    elif module_duration <= 1200:       # <= 20 mins
+        num_sections = 3
+    elif module_duration <= 2400:       # <= 40 mins
+        num_sections = 5
+    else:
+        num_sections = min(8, int(module_duration // 480))
     section_duration = module_duration / num_sections
     print(f"[MODULE] Content length: {content_length} chars. Targeting {num_sections} sections (~{section_duration:.2f}s per section)")
 
@@ -162,15 +170,16 @@ def _generate_modules_from_transcript(transcript: List[Dict]) -> Dict:
 
     total_duration = transcript[-1]["end"]
     print(f"[TRANSCRIPT] Processing transcript (Duration: {total_duration:.2f}s, Items: {len(transcript)})")
-
-    if total_duration < 1800:
-        target_modules = 4
-    elif total_duration < 3600:
-        target_modules = 6
-    elif total_duration < 7200:
-        target_modules = 8
+    if total_duration <= 900:
+        target_modules = 1
+    elif total_duration <= 1800:
+        target_modules = 2
+    elif total_duration <= 3600:
+        target_modules = 3
+    elif total_duration <= 7200:
+        target_modules = 5
     else:
-        target_modules = 10
+        target_modules = min(8, int(total_duration // 1800))
     print(f"[TRANSCRIPT] Targeting {target_modules} modules for {total_duration:.2f}s transcript")
 
     MAX_CHARS = 20000

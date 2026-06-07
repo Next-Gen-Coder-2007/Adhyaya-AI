@@ -166,6 +166,19 @@ const CourseDetail = () => {
     }
   };
 
+  const cleanupPlayer = () => {
+    if (player) {
+      try {
+        player.destroy(); // Destroy the player instance
+      } catch (e) {
+        console.warn("Player cleanup failed:", e);
+      }
+      setPlayer(null);
+      setPlayerReady(false);
+      setPlayerError(null);
+    }
+  };
+
   // --- FIX: Guard against null `course` in useEffect ---
   useEffect(() => {
     if (activeSection?.type === 'video' && course) {
@@ -188,7 +201,18 @@ const CourseDetail = () => {
     }
   }, [activeSection, playerReady]);
 
-  // --- Quiz Logic ---
+  useEffect(() => {
+    if (activeSection?.type !== 'video') {
+      cleanupPlayer();
+    }
+  }, [activeSection]);
+
+  useEffect(() => {
+    return () => {
+      cleanupPlayer();
+    };
+  }, []);
+
   const handleAnswerSelect = (moduleId, sectionIndex, questionIndex, selectedOption) => {
     setQuizAnswers(prev => ({
       ...prev,
@@ -227,7 +251,6 @@ const CourseDetail = () => {
     setExpandedModules(prev => ({ ...prev, [moduleId]: !prev[moduleId] }));
   };
 
-  // --- Loading & Error States ---
   if (loading && !course) {
     return (
       <Navbar>
@@ -278,7 +301,6 @@ const CourseDetail = () => {
     );
   }
 
-  // --- Main Render ---
   return (
     <Navbar>
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -294,9 +316,7 @@ const CourseDetail = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          {/* --- Main Content Area --- */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Video Section */}
             {activeSection?.type === 'video' && (
               <div className="bg-zinc-950 rounded-xl overflow-hidden border border-zinc-800 aspect-video relative flex flex-col items-center justify-center p-6 shadow-xl">
                 {(() => {
@@ -319,7 +339,6 @@ const CourseDetail = () => {
                     );
                   }
 
-                  // --- FIX: Resolve videoUrl for both playlists and single-video courses ---
                   let videoUrl = null;
                   if (module.video_url) {
                     videoUrl = module.video_url;
@@ -408,7 +427,6 @@ const CourseDetail = () => {
               </div>
             )}
 
-            {/* Quiz Section */}
             {activeSection?.type === 'quiz' && (
               <div className="bg-zinc-900/20 border border-zinc-800/80 rounded-xl p-6 min-h-[450px] flex flex-col justify-between shadow-sm">
                 <div>
@@ -435,7 +453,6 @@ const CourseDetail = () => {
                             {qIndex + 1}. {question.question}
                           </p>
 
-                          {/* MCQ Questions */}
                           {question.type === 'MCQ' && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {question.options?.map((option, oIndex) => {
@@ -467,7 +484,6 @@ const CourseDetail = () => {
                             </div>
                           )}
 
-                          {/* True/False Questions */}
                           {question.type === 'True/False' && (
                             <div className="flex gap-2">
                               {['True', 'False'].map((option) => {
@@ -494,7 +510,6 @@ const CourseDetail = () => {
                             </div>
                           )}
 
-                          {/* Short Answer Questions */}
                           {question.type === 'Short Answer' && (
                             <input
                               type="text"
@@ -506,7 +521,6 @@ const CourseDetail = () => {
                             />
                           )}
 
-                          {/* Feedback (Shown After Submission) */}
                           {quizSubmitted && (
                             <div className="mt-2 pt-3 border-t border-zinc-900/80 text-xs space-y-1">
                               <span className="text-amber-500 font-bold block">✔ Correct Answer: {question.correct_answer}</span>
@@ -519,7 +533,6 @@ const CourseDetail = () => {
                       );
                     })}
 
-                    {/* Submit / Retake Buttons */}
                     {!quizSubmitted ? (
                       <button
                         onClick={handleSubmitQuiz}
@@ -554,7 +567,6 @@ const CourseDetail = () => {
               </div>
             )}
 
-            {/* Assignment Section */}
             {activeSection?.type === 'assignment' && course && (
               <div className="bg-zinc-900/20 border border-zinc-800/80 rounded-xl p-6 min-h-[450px] flex flex-col justify-between shadow-sm">
                 <div>

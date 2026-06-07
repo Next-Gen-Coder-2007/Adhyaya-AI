@@ -14,5 +14,3 @@ class CourseChunk(Base):
     section_type = Column(String)
     text = Column(Text, nullable=False)
     embedding = Column(Vector(1536))
-
-    course = relationship("Course", back_populates="chunks")

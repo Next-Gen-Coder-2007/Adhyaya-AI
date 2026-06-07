@@ -27,11 +27,13 @@ const MessageBubble = ({ msg }) => {
         </div>
       )}
       <div
-        className={`max-w-[82%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed ${
-          isUser
+        className={`
+          max-w-[82%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed
+          ${isUser
             ? 'bg-amber-500/15 border border-amber-500/25 text-zinc-200 rounded-br-sm'
             : 'bg-zinc-800/80 border border-zinc-700/60 text-zinc-300 rounded-bl-sm'
-        }`}
+          }
+        `}
       >
         {msg.typing ? <TypingDots /> : msg.content}
       </div>
@@ -39,7 +41,7 @@ const MessageBubble = ({ msg }) => {
   );
 };
 
-// ── Suggested prompts shown at start ─────────────────────────────────────────
+// ── Suggested prompts ────────────────────────────────────────────────────────
 const SUGGESTIONS = [
   'Summarise the first module',
   'What are the key takeaways?',
@@ -100,7 +102,7 @@ export default function ChatPanel({ courseId, courseStatus }) {
       });
 
       setMessages(prev => [
-        ...prev.slice(0, -1), // remove typing indicator
+        ...prev.slice(0, -1), // Remove typing indicator
         { role: 'assistant', content: data.answer },
       ]);
 
@@ -137,16 +139,17 @@ export default function ChatPanel({ courseId, courseStatus }) {
 
   return (
     <>
-      {/* ── Floating toggle button ── */}
+      {/* Floating toggle button */}
       <button
         onClick={() => setOpen(o => !o)}
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full shadow-xl transition-all duration-200 hover:scale-105 active:scale-95"
-        style={{
-          background: open
-            ? 'rgba(39,39,42,0.95)'
-            : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-          border: open ? '1px solid rgba(255,255,255,0.08)' : 'none',
-        }}
+        className={`
+          fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full shadow-xl
+          transition-all duration-200 hover:scale-105 active:scale-95
+          ${open
+            ? 'bg-zinc-900/95 border border-white/10'
+            : 'bg-gradient-to-br from-amber-400 to-amber-600'
+          }
+        `}
         title={open ? 'Close tutor' : 'Ask the AI tutor'}
       >
         {open ? (
@@ -167,16 +170,18 @@ export default function ChatPanel({ courseId, courseStatus }) {
         )}
       </button>
 
-      {/* ── Chat panel ── */}
+      {/* Chat panel */}
       <div
-        className={`fixed bottom-20 right-6 z-40 flex flex-col rounded-2xl overflow-hidden shadow-2xl transition-all duration-300 origin-bottom-right ${
-          open ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
-        }`}
+        className={`
+          fixed bottom-20 right-6 z-40 flex flex-col rounded-2xl overflow-hidden shadow-2xl
+          transition-all duration-300 origin-bottom-right
+          ${open ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'}
+        `}
         style={{
           width: '340px',
           height: '500px',
-          background: 'rgba(18,18,20,0.97)',
-          border: '1px solid rgba(255,255,255,0.07)',
+          background: 'rgba(18, 18, 20, 0.97)',
+          border: '1px solid rgba(255, 255, 255, 0.07)',
           backdropFilter: 'blur(16px)',
         }}
       >
@@ -208,7 +213,7 @@ export default function ChatPanel({ courseId, courseStatus }) {
             <MessageBubble key={i} msg={msg} />
           ))}
 
-          {/* Suggested prompts (only at start) */}
+          {/* Suggested prompts */}
           {showSuggestions && isReady && (
             <div className="pt-1 space-y-1.5">
               <p className="text-[10px] text-zinc-600 uppercase tracking-wider font-medium pl-8">Try asking</p>
@@ -235,10 +240,7 @@ export default function ChatPanel({ courseId, courseStatus }) {
               Course is still generating…
             </div>
           ) : (
-            <div
-              className="flex items-end gap-2 rounded-xl px-3 py-2 transition-colors"
-              style={{ background: 'rgba(39,39,42,0.8)', border: '1px solid rgba(255,255,255,0.06)' }}
-            >
+            <div className="flex items-end gap-2 rounded-xl px-3 py-2 bg-zinc-800/80 border border-white/10 transition-colors">
               <textarea
                 ref={inputRef}
                 value={input}
@@ -246,19 +248,20 @@ export default function ChatPanel({ courseId, courseStatus }) {
                 onKeyDown={handleKeyDown}
                 placeholder="Ask about the course…"
                 rows={1}
-                className="flex-1 bg-transparent text-xs text-zinc-200 placeholder-zinc-600 resize-none outline-none leading-relaxed max-h-24"
+                className="flex-1 bg-transparent text-xs text-zinc-200 placeholder-zinc-600 resize-none outline-none leading-relaxed max-h-24 mb-1"
                 style={{ scrollbarWidth: 'none' }}
                 disabled={loading}
               />
               <button
                 onClick={() => sendMessage()}
                 disabled={!input.trim() || loading}
-                className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-150 disabled:opacity-30"
-                style={{
-                  background: input.trim() && !loading
-                    ? 'linear-gradient(135deg, #f59e0b, #d97706)'
-                    : 'rgba(63,63,70,0.5)',
-                }}
+                className={`
+                  flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-150
+                  ${input.trim() && !loading
+                    ? 'bg-gradient-to-br from-amber-400 to-amber-600'
+                    : 'bg-zinc-700/50'
+                  }
+                `}
               >
                 <Send className="w-3.5 h-3.5 text-zinc-900" />
               </button>
