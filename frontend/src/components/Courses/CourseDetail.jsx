@@ -20,8 +20,7 @@ import YouTube from 'react-youtube';
 import api from '../../api/axios';
 import Navbar from '../../components/Dashboard/Navbar';
 import ChatPanel from './ChatPanel';
-
-// --- Helper Functions ---
+import CustomYouTubePlayer from './CustomYoutubePlayer';
 const formatTime = (seconds) => {
   if (seconds === null || seconds === undefined || isNaN(seconds)) return null;
   const totalSeconds = Math.floor(Number(seconds));
@@ -32,7 +31,6 @@ const formatTime = (seconds) => {
   const paddedSecs = String(secs).padStart(2, '0');
   return hours > 0 ? `${String(hours).padStart(2, '0')}:${paddedMinutes}:${paddedSecs}` : `${paddedMinutes}:${paddedSecs}`;
 };
-
 const renderTimeRange = (startTime, endTime) => {
   const start = formatTime(startTime);
   const end = formatTime(endTime);
@@ -40,7 +38,6 @@ const renderTimeRange = (startTime, endTime) => {
   if (start) return `Starts at ${start}`;
   return 'Timeline N/A';
 };
-
 const getSectionIcon = (type) => {
   const icons = {
     video: <Film className="w-4 h-4 text-zinc-400" />,
@@ -51,7 +48,6 @@ const getSectionIcon = (type) => {
   };
   return icons[type] || icons.default;
 };
-
 const getSectionTypeLabel = (type) => {
   const labels = {
     video: 'Video Lecture',
@@ -62,25 +58,19 @@ const getSectionTypeLabel = (type) => {
   };
   return labels[type] || labels.default;
 };
-
-// --- Improved YouTube Video ID Extractor ---
 const getYouTubeVideoId = (url) => {
   if (!url) return null;
   try {
-    // Handle standard URLs (e.g., https://www.youtube.com/watch?v=VIDEO_ID)
     if (url.includes('youtube.com/watch')) {
       const urlObj = new URL(url);
       return urlObj.searchParams.get('v') || null;
     }
-    // Handle short URLs (e.g., https://youtu.be/VIDEO_ID)
     else if (url.includes('youtu.be/')) {
       return url.split('youtu.be/')[1]?.split('?')[0]?.split('&')[0] || null;
     }
-    // Handle embed URLs (e.g., https://www.youtube.com/embed/VIDEO_ID)
     else if (url.includes('youtube.com/embed/')) {
       return url.split('youtube.com/embed/')[1]?.split('?')[0]?.split('&')[0] || null;
     }
-    // Handle direct video paths (e.g., https://www.youtube.com/VIDEO_ID)
     else if (url.includes('youtube.com/')) {
       const parts = url.split('youtube.com/')[1]?.split('?')[0]?.split('&')[0];
       return parts?.length > 0 ? parts[0] : null;
@@ -90,8 +80,6 @@ const getYouTubeVideoId = (url) => {
     return null;
   }
 };
-
-// --- Main Component ---
 const CourseDetail = () => {
   const { id } = useParams();
   const [course, setCourse] = useState(null);
@@ -106,8 +94,6 @@ const CourseDetail = () => {
   const [playerReady, setPlayerReady] = useState(false);
   const [playerError, setPlayerError] = useState(null);
   const navigate = useNavigate();
-
-  // --- Fetch Course Data ---
   const fetchCourse = async () => {
     try {
       setLoading(true);
@@ -131,11 +117,9 @@ const CourseDetail = () => {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     fetchCourse();
   }, [id]);
-
   useEffect(() => {
     let interval;
     if (course?.status === 'generating') {
@@ -143,33 +127,26 @@ const CourseDetail = () => {
     }
     return () => clearInterval(interval);
   }, [course?.status]);
-
-  // --- YouTube Player Logic ---
   const onPlayerReady = (event) => {
     setPlayer(event.target);
     setPlayerReady(true);
     setPlayerError(null);
   };
-
   const onPlayerStateChange = (event) => {
-    // Optional: Handle player state changes (e.g., pause, play, end)
   };
-
   const onPlayerError = (event) => {
     console.error("YouTube Player Error:", event);
     setPlayerError("Failed to load video. Please try again later.");
   };
-
   const seekTo = (seconds) => {
     if (player && !isNaN(seconds)) {
       player.seekTo(seconds, true);
     }
   };
-
   const cleanupPlayer = () => {
     if (player) {
       try {
-        player.destroy(); // Destroy the player instance
+        player.destroy(); 
       } catch (e) {
         console.warn("Player cleanup failed:", e);
       }
@@ -178,48 +155,43 @@ const CourseDetail = () => {
       setPlayerError(null);
     }
   };
-
-  // --- FIX: Guard against null `course` in useEffect ---
   useEffect(() => {
     if (activeSection?.type === 'video' && course) {
       const module = course.modules?.find(m => m.id === activeSection.moduleId);
       const videoUrl = module?.video_url || (course.modules?.length === 1 ? course.youtube_url : null);
       const newVideoId = getYouTubeVideoId(videoUrl);
       const currentVideoId = player?.getVideoUrl() ? getYouTubeVideoId(player.getVideoUrl()) : null;
-
       if (newVideoId && newVideoId !== currentVideoId) {
         setPlayerReady(false);
         setPlayerError(null);
       }
     }
   }, [activeSection, course, player]);
-
-  // Sync player with active section
   useEffect(() => {
-    if (activeSection?.type === 'video' && playerReady && activeSection.start_time) {
+    if (
+      activeSection?.type === 'video' && 
+      playerReady && 
+      player &&
+      activeSection.start_time) {
       seekTo(activeSection.start_time);
     }
-  }, [activeSection, playerReady]);
-
+  }, [activeSection, playerReady, player]);
   useEffect(() => {
     if (activeSection?.type !== 'video') {
       cleanupPlayer();
     }
   }, [activeSection]);
-
   useEffect(() => {
     return () => {
       cleanupPlayer();
     };
   }, []);
-
   const handleAnswerSelect = (moduleId, sectionIndex, questionIndex, selectedOption) => {
     setQuizAnswers(prev => ({
       ...prev,
       [`${moduleId}-${sectionIndex}-${questionIndex}`]: selectedOption
     }));
   };
-
   const calculateQuizScore = () => {
     if (!activeSection?.content?.quiz) return 0;
     let score = 0;
@@ -234,23 +206,19 @@ const CourseDetail = () => {
     });
     return Math.round((score / activeSection.content.quiz.length) * 100);
   };
-
   const handleSubmitQuiz = () => {
     const score = calculateQuizScore();
     setQuizScore(score);
     setQuizSubmitted(true);
   };
-
   const resetQuiz = () => {
     setQuizAnswers({});
     setQuizSubmitted(false);
     setQuizScore(null);
   };
-
   const toggleModule = (moduleId) => {
     setExpandedModules(prev => ({ ...prev, [moduleId]: !prev[moduleId] }));
   };
-
   if (loading && !course) {
     return (
       <Navbar>
@@ -261,7 +229,6 @@ const CourseDetail = () => {
       </Navbar>
     );
   }
-
   if (error) {
     return (
       <Navbar>
@@ -279,7 +246,6 @@ const CourseDetail = () => {
       </Navbar>
     );
   }
-
   if (course?.status === 'generating') {
     return (
       <Navbar>
@@ -300,7 +266,6 @@ const CourseDetail = () => {
       </Navbar>
     );
   }
-
   return (
     <Navbar>
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -314,11 +279,10 @@ const CourseDetail = () => {
           </button>
           <h1 className="text-base font-bold text-zinc-300 truncate max-w-xl font-mono">{course.title}</h1>
         </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           <div className="lg:col-span-2 space-y-6">
             {activeSection?.type === 'video' && (
-              <div className="bg-zinc-950 rounded-xl overflow-hidden border border-zinc-800 aspect-video relative flex flex-col items-center justify-center p-6 shadow-xl">
+              <div className="bg-zinc-950 rounded-xl border border-zinc-800 aspect-video relative flex flex-col items-center justify-center p-6 shadow-xl">
                 {(() => {
                   if (!course) {
                     return (
@@ -328,7 +292,6 @@ const CourseDetail = () => {
                       </div>
                     );
                   }
-
                   const module = course.modules?.find(m => m.id === activeSection.moduleId);
                   if (!module) {
                     return (
@@ -338,19 +301,16 @@ const CourseDetail = () => {
                       </div>
                     );
                   }
-
                   let videoUrl = null;
                   if (module.video_url) {
                     videoUrl = module.video_url;
-                  } else if (course.modules?.length === 1 && course.youtube_url) {
+                  } else if (course.youtube_url) {
                     videoUrl = course.youtube_url;
                   } else {
                     const firstVideoModule = course.modules?.find(m => m.video_url);
                     videoUrl = firstVideoModule?.video_url;
                   }
-
                   const videoId = getYouTubeVideoId(videoUrl);
-
                   if (!videoUrl) {
                     return (
                       <div className="text-center text-zinc-400">
@@ -359,7 +319,6 @@ const CourseDetail = () => {
                       </div>
                     );
                   }
-
                   if (!videoId) {
                     return (
                       <div className="text-center text-zinc-400">
@@ -371,7 +330,6 @@ const CourseDetail = () => {
                       </div>
                     );
                   }
-
                   if (playerError) {
                     return (
                       <div className="text-center text-zinc-400">
@@ -389,25 +347,22 @@ const CourseDetail = () => {
                       </div>
                     );
                   }
-
                   return (
                     <>
-                      <YouTube
+                      <CustomYouTubePlayer
                         videoId={videoId}
-                        opts={{
-                          height: '100%',
-                          width: '100%',
-                          playerVars: {
-                            autoplay: 0,
-                            start: activeSection.start_time || 0,
-                            origin: window.location.origin,
-                            enablejsapi: 1,
-                          },
+                        startTime={activeSection.start_time || 0}
+                        endTime={activeSection.end_time || null}
+                        theme="dark"
+                        onReady={(player) => {
+                          setPlayer(player);
+                          setPlayerReady(true);
+                          setPlayerError(null);
                         }}
-                        onReady={onPlayerReady}
-                        onStateChange={onPlayerStateChange}
-                        onError={onPlayerError}
-                        className="w-full h-full"
+                        onError={(error) => {
+                          setPlayerError(error);
+                          setPlayerReady(false);
+                        }}
                       />
                       {!playerReady && (
                         <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/80">
@@ -417,7 +372,6 @@ const CourseDetail = () => {
                     </>
                   );
                 })()}
-
                 <p className="text-zinc-300 font-semibold text-sm mb-1 mt-4">
                   {activeSection.title}
                 </p>
@@ -426,7 +380,6 @@ const CourseDetail = () => {
                 </p>
               </div>
             )}
-
             {activeSection?.type === 'quiz' && (
               <div className="bg-zinc-900/20 border border-zinc-800/80 rounded-xl p-6 min-h-[450px] flex flex-col justify-between shadow-sm">
                 <div>
@@ -441,18 +394,15 @@ const CourseDetail = () => {
                       {getSectionIcon(activeSection.type)}
                     </div>
                   </div>
-
                   <div className="space-y-4">
                     {activeSection.content?.quiz?.map((question, qIndex) => {
                       const questionKey = `${activeSection.moduleId}-${activeSection.sectionIndex}-${qIndex}`;
                       const userAnswer = quizAnswers[questionKey];
-
                       return (
                         <div key={qIndex} className="bg-zinc-950/40 border border-zinc-800/60 p-5 rounded-xl space-y-3">
                           <p className="font-semibold text-zinc-200 text-sm">
                             {qIndex + 1}. {question.question}
                           </p>
-
                           {question.type === 'MCQ' && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {question.options?.map((option, oIndex) => {
@@ -460,7 +410,6 @@ const CourseDetail = () => {
                                 const isCorrect = question.correct_answer === option;
                                 const isIncorrect = isSelected && !isCorrect;
                                 const showFeedback = quizSubmitted;
-
                                 return (
                                   <button
                                     key={oIndex}
@@ -483,7 +432,6 @@ const CourseDetail = () => {
                               })}
                             </div>
                           )}
-
                           {question.type === 'True/False' && (
                             <div className="flex gap-2">
                               {['True', 'False'].map((option) => {
@@ -491,7 +439,6 @@ const CourseDetail = () => {
                                 const isCorrect = question.correct_answer === option;
                                 const isIncorrect = isSelected && !isCorrect;
                                 const showFeedback = quizSubmitted;
-
                                 return (
                                   <button
                                     key={option}
@@ -509,7 +456,6 @@ const CourseDetail = () => {
                               })}
                             </div>
                           )}
-
                           {question.type === 'Short Answer' && (
                             <input
                               type="text"
@@ -520,7 +466,6 @@ const CourseDetail = () => {
                               placeholder="Your answer..."
                             />
                           )}
-
                           {quizSubmitted && (
                             <div className="mt-2 pt-3 border-t border-zinc-900/80 text-xs space-y-1">
                               <span className="text-amber-500 font-bold block">✔ Correct Answer: {question.correct_answer}</span>
@@ -532,7 +477,6 @@ const CourseDetail = () => {
                         </div>
                       );
                     })}
-
                     {!quizSubmitted ? (
                       <button
                         onClick={handleSubmitQuiz}
@@ -566,7 +510,6 @@ const CourseDetail = () => {
                 </div>
               </div>
             )}
-
             {activeSection?.type === 'assignment' && course && (
               <div className="bg-zinc-900/20 border border-zinc-800/80 rounded-xl p-6 min-h-[450px] flex flex-col justify-between shadow-sm">
                 <div>
@@ -581,7 +524,6 @@ const CourseDetail = () => {
                       {getSectionIcon(activeSection.type)}
                     </div>
                   </div>
-
                   <div className="space-y-4">
                     {activeSection.content?.assignments?.map((assignment, aIndex) => (
                       <div key={aIndex} className="space-y-4">
@@ -592,7 +534,6 @@ const CourseDetail = () => {
                             Tier Index: {assignment.difficulty}
                           </span>
                         </div>
-
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="bg-zinc-950/20 border border-zinc-800/40 p-4 rounded-xl space-y-2">
                             <h5 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Operational Target Milestones</h5>
@@ -613,7 +554,6 @@ const CourseDetail = () => {
                 </div>
               </div>
             )}
-
             {activeSection?.type === 'summary' && course && (
               <div className="bg-zinc-900/20 border border-zinc-800/80 rounded-xl p-6 min-h-[450px] flex flex-col justify-between shadow-sm">
                 <div>
@@ -628,13 +568,11 @@ const CourseDetail = () => {
                       {getSectionIcon(activeSection.type)}
                     </div>
                   </div>
-
                   <div className="space-y-4">
                     <div className="bg-zinc-950/40 border border-zinc-800/60 p-4 rounded-xl">
                       <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-2">Synopsis Overview</h4>
                       <p className="text-zinc-300 text-xs leading-relaxed font-normal">{activeSection.content?.summary}</p>
                     </div>
-
                     {activeSection.content?.key_takeaways?.length > 0 && (
                       <div className="bg-zinc-950/20 border border-zinc-800/40 p-4 rounded-xl space-y-2">
                         <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Core Takeaways Ledger</h4>
@@ -648,7 +586,6 @@ const CourseDetail = () => {
                         </ul>
                       </div>
                     )}
-
                     {activeSection.content?.resources?.length > 0 && (
                       <div className="bg-zinc-950/20 border border-zinc-800/40 p-4 rounded-xl space-y-3">
                         <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Reference Attachments</h4>
@@ -672,7 +609,6 @@ const CourseDetail = () => {
                 </div>
               </div>
             )}
-
             {activeSection?.type === 'video' && (
               <div className="bg-zinc-900/10 border border-zinc-800 rounded-xl p-5 space-y-1">
                 <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Lecture Outline Context</h3>
@@ -680,7 +616,6 @@ const CourseDetail = () => {
               </div>
             )}
           </div>
-
           <div className="bg-zinc-900/20 border border-zinc-800 rounded-xl overflow-hidden flex flex-col shadow-sm">
             <div className="p-4 border-b border-zinc-800 bg-zinc-900/40 flex items-center justify-between">
               <h3 className="font-bold text-xs text-zinc-400 tracking-wider uppercase">Syllabus Index</h3>
@@ -688,7 +623,6 @@ const CourseDetail = () => {
                 {course?.modules?.length || 0} Blocks
               </span>
             </div>
-
             <div className="divide-y divide-zinc-800">
               {course?.modules?.map((module, mIdx) => {
                 const isExpanded = !!expandedModules[module.id];
@@ -716,7 +650,6 @@ const CourseDetail = () => {
                         <ChevronDown className="w-4 h-4 text-zinc-600 flex-shrink-0 mt-0.5" />
                       )}
                     </button>
-
                     {isExpanded && (
                       <div className="bg-zinc-950/20 border-t border-zinc-900/60 pb-1.5 divide-y divide-zinc-900/40">
                         {module.sections?.map((section, sIdx) => {
@@ -769,5 +702,4 @@ const CourseDetail = () => {
     </Navbar>
   );
 };
-
 export default CourseDetail;
