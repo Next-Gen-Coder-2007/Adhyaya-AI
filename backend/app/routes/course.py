@@ -183,3 +183,36 @@ def course_chat(
     history_dicts = [{"role": m.role, "content": m.content} for m in body.history]
     answer = rag_chat(course_id, body.question, history_dicts)
     return {"answer": answer}
+
+@router.patch("/sections/{section_id}/toggle")
+def toggle_section_completion(
+    section_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    section = (
+        db.query(Section)
+        .join(Module, Section.module_id == Module.id)
+        .join(Course, Module.course_id == Course.id)
+        .filter(
+            Section.id == section_id,
+            Course.user_id == current_user.id
+        )
+        .first()
+    )
+
+    if not section:
+        raise HTTPException(
+            status_code=404,
+            detail="Section not found"
+        )
+
+    section.completed = not section.completed
+
+    db.commit()
+    db.refresh(section)
+
+    return {
+        "id": section.id,
+        "completed": section.completed
+    }

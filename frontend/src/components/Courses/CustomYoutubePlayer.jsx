@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import YouTube from 'react-youtube';
 import {
   PlayCircle,
@@ -10,7 +10,8 @@ import {
   Maximize,
   Minimize,
 } from 'lucide-react';
-const CustomYouTubePlayer = ({
+
+const CustomYouTubePlayer = React.memo(({
   videoId,
   startTime = 0,
   endTime = null,
@@ -27,7 +28,10 @@ const CustomYouTubePlayer = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const intervalRef = useRef(null);
   const containerRef = useRef(null);
-  const opts = {
+  const playerRef = useRef(null);
+
+  // Memoize opts to avoid unnecessary recreations
+  const opts = React.useMemo(() => ({
     height: '100%',
     width: '100%',
     playerVars: {
@@ -44,94 +48,149 @@ const CustomYouTubePlayer = ({
       origin: window.location.origin,
       widget_referrer: window.location.href,
     },
-  };
-  const onPlayerReady = (event) => {
-    setPlayer(event.target);
-    setDuration(event.target.getDuration());
-    event.target.setVolume(volume);
-    if (isMuted) event.target.mute();
-    if (onReady) onReady(event.target);
-  };
-  const onPlayerStateChange = (event) => {
+  }), [startTime]);
+
+  // Handle player ready event
+  const onPlayerReady = useCallback((event) => {
+    const playerInstance = event.target;
+    playerRef.current = playerInstance;
+    setPlayer(playerInstance);
+    setDuration(playerInstance.getDuration());
+    playerInstance.setVolume(volume);
+    if (isMuted) playerInstance.mute();
+    if (onReady) onReady(playerInstance);
+
+    // Seek to startTime immediately after player is ready
+    if (startTime && startTime !== playerInstance.getCurrentTime()) {
+      playerInstance.seekTo(startTime, true);
+    }
+  }, [volume, isMuted, startTime, onReady]);
+
+  // Handle player state change
+  const onPlayerStateChange = useCallback((event) => {
     if (event.data === 1) setIsPlaying(true);
     else if (event.data === 2 || event.data === 0) setIsPlaying(false);
-  };
-  const onPlayerError = (event) => {
+  }, []);
+
+  // Handle player error
+  const onPlayerError = useCallback((event) => {
     setPlayerError('Failed to load video. Please try again later.');
     if (onError) onError('Failed to load video. Please try again later.');
-  };
-  const updateTime = () => {
-    if (player) {
-      const newTime = player.getCurrentTime();
+  }, [onError]);
+
+  // Update current time
+  const updateTime = useCallback(() => {
+    if (playerRef.current) {
+      const newTime = playerRef.current.getCurrentTime();
       setCurrentTime(newTime);
       if (endTime && newTime >= endTime) {
-        player.pauseVideo();
-        player.seekTo(startTime);
+        playerRef.current.pauseVideo();
+        playerRef.current.seekTo(startTime);
       }
     }
-  };
+  }, [endTime, startTime]);
+
+  // Set up interval to update current time
   useEffect(() => {
-    if (player) intervalRef.current = setInterval(updateTime, 1000);
+    if (playerRef.current) {
+      intervalRef.current = setInterval(updateTime, 1000);
+    }
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [player]);
+  }, [updateTime]);
+
+  // Clean up player on unmount
   useEffect(() => {
     return () => {
-      if (player) {
-        try { player.destroy(); } catch (e) { console.warn('Player cleanup failed:', e); }
+      if (playerRef.current) {
+        try {
+          playerRef.current.destroy();
+        } catch (e) {
+          console.warn('Player cleanup failed:', e);
+        }
       }
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, []);
-  const togglePlayPause = () => {
-    if (player) {
-      if (isPlaying) player.pauseVideo();
-      else player.playVideo();
+
+  // Handle videoId and startTime changes
+  useEffect(() => {
+    if (playerRef.current && videoId) {
+      const currentVideoId = playerRef.current.getVideoUrl()?.split('v=')[1]?.split('&')[0];
+      if (currentVideoId !== videoId) {
+        // Load the new video and seek to startTime
+        playerRef.current.loadVideoById(videoId, startTime);
+      } else if (startTime !== playerRef.current.getCurrentTime()) {
+        // If the video is the same but startTime changed, seek to it
+        playerRef.current.seekTo(startTime, true);
+      }
+    }
+  }, [videoId, startTime]);
+
+  // Toggle play/pause
+  const togglePlayPause = useCallback(() => {
+    if (playerRef.current) {
+      if (isPlaying) playerRef.current.pauseVideo();
+      else playerRef.current.playVideo();
       setIsPlaying(!isPlaying);
     }
-  };
-  const seekTo = (time) => {
-    if (player) {
-      player.seekTo(time, true);
+  }, [isPlaying]);
+
+  // Seek to a specific time
+  const seekTo = useCallback((time) => {
+    if (playerRef.current) {
+      playerRef.current.seekTo(time, true);
       setCurrentTime(time);
     }
-  };
-  const skip = (seconds) => {
-    if (player) {
+  }, []);
+
+  // Skip forward or backward
+  const skip = useCallback((seconds) => {
+    if (playerRef.current) {
       const newTime = currentTime + seconds;
       if (newTime >= startTime && (endTime ? newTime <= endTime : true)) {
         seekTo(newTime);
       }
     }
-  };
-  const toggleMute = () => {
-    if (player) {
-      if (isMuted) player.unMute();
-      else player.mute();
+  }, [currentTime, startTime, endTime, seekTo]);
+
+  // Toggle mute
+  const toggleMute = useCallback(() => {
+    if (playerRef.current) {
+      if (isMuted) playerRef.current.unMute();
+      else playerRef.current.mute();
       setIsMuted(!isMuted);
     }
-  };
-  const handleVolumeChange = (e) => {
+  }, [isMuted]);
+
+  // Handle volume change
+  const handleVolumeChange = useCallback((e) => {
     const newVolume = parseInt(e.target.value);
     setVolume(newVolume);
-    if (player) {
-      player.setVolume(newVolume);
+    if (playerRef.current) {
+      playerRef.current.setVolume(newVolume);
       if (newVolume === 0) setIsMuted(true);
       else setIsMuted(false);
     }
-  };
+  }, []);
+
+  // Format time for display
   const formatTime = (seconds) => {
     if (isNaN(seconds) || seconds === undefined) return '00:00';
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
+
+  // Calculate progress percentage
   const progressPercent = endTime
     ? ((currentTime - startTime) / (endTime - startTime)) * 100
     : (currentTime / duration) * 100;
-  const handleProgressClick = (e) => {
-    if (!player) return;
+
+  // Handle progress bar click
+  const handleProgressClick = useCallback((e) => {
+    if (!playerRef.current) return;
     const progressBar = e.currentTarget;
     const rect = progressBar.getBoundingClientRect();
     const clickPosition = e.clientX - rect.left;
@@ -140,8 +199,10 @@ const CustomYouTubePlayer = ({
       ? startTime + (percent / 100) * (endTime - startTime)
       : (percent / 100) * duration;
     seekTo(newTime);
-  };
-  const toggleFullscreen = () => {
+  }, [startTime, endTime, duration, seekTo]);
+
+  // Toggle fullscreen
+  const toggleFullscreen = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
     if (!isFullscreen) {
@@ -154,7 +215,9 @@ const CustomYouTubePlayer = ({
       else if (document.msExitFullscreen) document.msExitFullscreen();
     }
     setIsFullscreen(!isFullscreen);
-  };
+  }, [isFullscreen]);
+
+  // Handle fullscreen change
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
@@ -168,6 +231,8 @@ const CustomYouTubePlayer = ({
       document.removeEventListener('msfullscreenchange', handleFullscreenChange);
     };
   }, []);
+
+  // Styles
   const styles = {
     bg: 'bg-zinc-900',
     progress: 'bg-zinc-700',
@@ -177,6 +242,8 @@ const CustomYouTubePlayer = ({
     slider: 'bg-zinc-700',
     sliderThumb: 'bg-amber-500',
   };
+
+  // Render error state
   if (playerError) {
     return (
       <div className={`rounded-xl ${styles.bg} p-4 text-center w-full`}>
@@ -190,12 +257,13 @@ const CustomYouTubePlayer = ({
       </div>
     );
   }
+
+  // Main render
   return (
     <div
       ref={containerRef}
       className={`rounded-xl ${styles.bg} w-full overflow-visible relative`}
     >
-      {}
       <div className="aspect-video w-full bg-black relative">
         <YouTube
           videoId={videoId}
@@ -205,16 +273,14 @@ const CustomYouTubePlayer = ({
           onError={onPlayerError}
           className="w-full h-full absolute top-0 left-0"
         />
-        {}
         <style>{`
           .youtube-iframe iframe {
             pointer-events: none !important;
           }
         `}</style>
       </div>
-      {}
+
       <div className="p-4 space-y-3 w-full">
-        {}
         <div
           className={`h-1 rounded-full cursor-pointer ${styles.progress}`}
           onClick={handleProgressClick}
@@ -224,14 +290,13 @@ const CustomYouTubePlayer = ({
             style={{ width: `${progressPercent}%` }}
           />
         </div>
-        {}
+
         <div className="flex items-center justify-between text-xs text-zinc-400">
           <span>{formatTime(currentTime)}</span>
           <span>{endTime ? formatTime(endTime) : formatTime(duration)}</span>
         </div>
-        {}
+
         <div className="flex items-center justify-between">
-          {}
           <div className="flex items-center gap-2">
             <button onClick={toggleMute} className={styles.button} disabled={!player}>
               {isMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
@@ -246,7 +311,7 @@ const CustomYouTubePlayer = ({
               disabled={!player}
             />
           </div>
-          {}
+
           <div className="flex items-center gap-4">
             <button
               onClick={() => skip(-5)}
@@ -269,7 +334,7 @@ const CustomYouTubePlayer = ({
             >
               <SkipForward className="w-5 h-5" />
             </button>
-            {}
+
             <button
               onClick={toggleFullscreen}
               className={`transition-colors ${styles.button}`}
@@ -282,5 +347,6 @@ const CustomYouTubePlayer = ({
       </div>
     </div>
   );
-};
+});
+
 export default CustomYouTubePlayer;

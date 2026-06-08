@@ -46,6 +46,7 @@ class SectionBase(BaseModel):
     start_time: Optional[float] = None
     end_time: Optional[float] = None
     content: Optional[Any] = None
+    completed: bool = False
 
 class SectionCreate(SectionBase):
     pass
@@ -55,7 +56,8 @@ class SectionUpdate(BaseModel):
     title: Optional[str] = None
     start_time: Optional[float] = None
     end_time: Optional[float] = None
-    content: Optional[Any] = None   # 🔥 FIX HERE TOO
+    content: Optional[Any] = None
+    completed: Optional[bool] = None
 
 
 class SectionResponse(SectionBase):

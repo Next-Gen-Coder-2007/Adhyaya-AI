@@ -21,6 +21,7 @@ import api from '../../api/axios';
 import Navbar from '../../components/Dashboard/Navbar';
 import ChatPanel from './ChatPanel';
 import CustomYouTubePlayer from './CustomYoutubePlayer';
+
 const formatTime = (seconds) => {
   if (seconds === null || seconds === undefined || isNaN(seconds)) return null;
   const totalSeconds = Math.floor(Number(seconds));
@@ -31,6 +32,7 @@ const formatTime = (seconds) => {
   const paddedSecs = String(secs).padStart(2, '0');
   return hours > 0 ? `${String(hours).padStart(2, '0')}:${paddedMinutes}:${paddedSecs}` : `${paddedMinutes}:${paddedSecs}`;
 };
+
 const renderTimeRange = (startTime, endTime) => {
   const start = formatTime(startTime);
   const end = formatTime(endTime);
@@ -38,6 +40,7 @@ const renderTimeRange = (startTime, endTime) => {
   if (start) return `Starts at ${start}`;
   return 'Timeline N/A';
 };
+
 const getSectionIcon = (type) => {
   const icons = {
     video: <Film className="w-4 h-4 text-zinc-400" />,
@@ -48,6 +51,7 @@ const getSectionIcon = (type) => {
   };
   return icons[type] || icons.default;
 };
+
 const getSectionTypeLabel = (type) => {
   const labels = {
     video: 'Video Lecture',
@@ -58,6 +62,7 @@ const getSectionTypeLabel = (type) => {
   };
   return labels[type] || labels.default;
 };
+
 const getYouTubeVideoId = (url) => {
   if (!url) return null;
   try {
@@ -80,6 +85,7 @@ const getYouTubeVideoId = (url) => {
     return null;
   }
 };
+
 const CourseDetail = () => {
   const { id } = useParams();
   const [course, setCourse] = useState(null);
@@ -93,7 +99,32 @@ const CourseDetail = () => {
   const [player, setPlayer] = useState(null);
   const [playerReady, setPlayerReady] = useState(false);
   const [playerError, setPlayerError] = useState(null);
+
+  const totalSections =
+    course?.modules?.reduce(
+      (acc, module) => acc + module.sections.length,
+      0
+    ) || 0;
+
+  const completedSections =
+    course?.modules?.reduce(
+      (acc, module) =>
+        acc +
+        module.sections.filter(
+          (section) => section.completed
+        ).length,
+      0
+    ) || 0;
+
+  const progress =
+    totalSections > 0
+      ? Math.round(
+          (completedSections / totalSections) * 100
+        )
+      : 0;
+
   const navigate = useNavigate();
+
   const fetchCourse = async () => {
     try {
       setLoading(true);
@@ -117,9 +148,47 @@ const CourseDetail = () => {
       setLoading(false);
     }
   };
+
+  const toggleSectionCompletion = async (sectionId) => {
+    try {
+      const response = await api.patch(
+        `/courses/sections/${sectionId}/toggle`
+      );
+
+      const updatedCompleted = response.data.completed;
+
+      setCourse((prev) => ({
+        ...prev,
+        modules: prev.modules.map((module) => ({
+          ...module,
+          sections: module.sections.map((section) =>
+            section.id === sectionId
+              ? {
+                  ...section,
+                  completed: updatedCompleted,
+                }
+              : section
+          ),
+        })),
+      }));
+
+      // update active section too
+      if (activeSection?.id === sectionId) {
+        setActiveSection((prev) => ({
+          ...prev,
+          completed: updatedCompleted,
+        }));
+      }
+
+    } catch (error) {
+      console.error("Failed to update section", error);
+    }
+  };
+
   useEffect(() => {
     fetchCourse();
   }, [id]);
+
   useEffect(() => {
     let interval;
     if (course?.status === 'generating') {
@@ -127,26 +196,35 @@ const CourseDetail = () => {
     }
     return () => clearInterval(interval);
   }, [course?.status]);
+
   const onPlayerReady = (event) => {
     setPlayer(event.target);
     setPlayerReady(true);
     setPlayerError(null);
+    // Seek to start_time immediately after player is ready
+    if (activeSection?.start_time) {
+      event.target.seekTo(activeSection.start_time, true);
+    }
   };
+
   const onPlayerStateChange = (event) => {
   };
+
   const onPlayerError = (event) => {
     console.error("YouTube Player Error:", event);
     setPlayerError("Failed to load video. Please try again later.");
   };
+
   const seekTo = (seconds) => {
     if (player && !isNaN(seconds)) {
       player.seekTo(seconds, true);
     }
   };
+
   const cleanupPlayer = () => {
     if (player) {
       try {
-        player.destroy(); 
+        player.destroy();
       } catch (e) {
         console.warn("Player cleanup failed:", e);
       }
@@ -155,43 +233,31 @@ const CourseDetail = () => {
       setPlayerError(null);
     }
   };
-  useEffect(() => {
-    if (activeSection?.type === 'video' && course) {
-      const module = course.modules?.find(m => m.id === activeSection.moduleId);
-      const videoUrl = module?.video_url || (course.modules?.length === 1 ? course.youtube_url : null);
-      const newVideoId = getYouTubeVideoId(videoUrl);
-      const currentVideoId = player?.getVideoUrl() ? getYouTubeVideoId(player.getVideoUrl()) : null;
-      if (newVideoId && newVideoId !== currentVideoId) {
-        setPlayerReady(false);
-        setPlayerError(null);
-      }
-    }
-  }, [activeSection, course, player]);
-  useEffect(() => {
-    if (
-      activeSection?.type === 'video' && 
-      playerReady && 
-      player &&
-      activeSection.start_time) {
-      seekTo(activeSection.start_time);
-    }
-  }, [activeSection, playerReady, player]);
-  useEffect(() => {
-    if (activeSection?.type !== 'video') {
-      cleanupPlayer();
-    }
-  }, [activeSection]);
+
   useEffect(() => {
     return () => {
       cleanupPlayer();
     };
   }, []);
+
+  useEffect(() => {
+    if (
+      activeSection?.type === 'video' &&
+      playerReady &&
+      player &&
+      activeSection.start_time !== undefined
+    ) {
+      seekTo(activeSection.start_time);
+    }
+  }, [activeSection, playerReady, player, activeSection?.start_time]);
+
   const handleAnswerSelect = (moduleId, sectionIndex, questionIndex, selectedOption) => {
     setQuizAnswers(prev => ({
       ...prev,
       [`${moduleId}-${sectionIndex}-${questionIndex}`]: selectedOption
     }));
   };
+
   const calculateQuizScore = () => {
     if (!activeSection?.content?.quiz) return 0;
     let score = 0;
@@ -206,19 +272,23 @@ const CourseDetail = () => {
     });
     return Math.round((score / activeSection.content.quiz.length) * 100);
   };
+
   const handleSubmitQuiz = () => {
     const score = calculateQuizScore();
     setQuizScore(score);
     setQuizSubmitted(true);
   };
+
   const resetQuiz = () => {
     setQuizAnswers({});
     setQuizSubmitted(false);
     setQuizScore(null);
   };
+
   const toggleModule = (moduleId) => {
     setExpandedModules(prev => ({ ...prev, [moduleId]: !prev[moduleId] }));
   };
+
   if (loading && !course) {
     return (
       <Navbar>
@@ -229,6 +299,7 @@ const CourseDetail = () => {
       </Navbar>
     );
   }
+
   if (error) {
     return (
       <Navbar>
@@ -246,6 +317,7 @@ const CourseDetail = () => {
       </Navbar>
     );
   }
+
   if (course?.status === 'generating') {
     return (
       <Navbar>
@@ -266,6 +338,7 @@ const CourseDetail = () => {
       </Navbar>
     );
   }
+
   return (
     <Navbar>
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -277,7 +350,27 @@ const CourseDetail = () => {
             <ArrowLeft className="w-4 h-4" />
             <span>Course Overview</span>
           </button>
-          <h1 className="text-base font-bold text-zinc-300 truncate max-w-xl font-mono">{course.title}</h1>
+          <div className="flex-1 max-w-xl">
+            <h1 className="text-base font-bold text-zinc-300 truncate font-mono">
+              {course.title}
+            </h1>
+
+            <div className="mt-3">
+              <div className="flex justify-between text-[10px] text-zinc-500 mb-1 uppercase tracking-wider">
+                <span>Progress</span>
+                <span>{progress}%</span>
+              </div>
+
+              <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-amber-500 transition-all duration-300"
+                  style={{
+                    width: `${progress}%`,
+                  }}
+                />
+              </div>
+            </div>
+          </div>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           <div className="lg:col-span-2 space-y-6">
@@ -354,15 +447,8 @@ const CourseDetail = () => {
                         startTime={activeSection.start_time || 0}
                         endTime={activeSection.end_time || null}
                         theme="dark"
-                        onReady={(player) => {
-                          setPlayer(player);
-                          setPlayerReady(true);
-                          setPlayerError(null);
-                        }}
-                        onError={(error) => {
-                          setPlayerError(error);
-                          setPlayerReady(false);
-                        }}
+                        onReady={onPlayerReady}
+                        onError={onPlayerError}
                       />
                       {!playerReady && (
                         <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/80">
@@ -660,9 +746,6 @@ const CourseDetail = () => {
                               onClick={() => {
                                 setActiveSection({ moduleId: module.id, sectionIndex: sIdx, ...section });
                                 resetQuiz();
-                                if (section.type === 'video') {
-                                  seekTo(section.start_time);
-                                }
                               }}
                               className={`w-full p-3.5 text-left flex items-start gap-3 text-xs transition-all ${
                                 isSectionActive
@@ -670,11 +753,33 @@ const CourseDetail = () => {
                                   : 'hover:bg-zinc-800/10 text-zinc-400 hover:text-zinc-300'
                               }`}
                             >
-                              <div className={`mt-0.5 flex-shrink-0 ${isSectionActive ? 'text-amber-500' : 'text-zinc-500'}`}>
-                                {getSectionIcon(section.type)}
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={section.completed || false}
+                                  onChange={(e) => {
+                                    e.stopPropagation();
+                                    toggleSectionCompletion(section.id);
+                                  }}
+                                  className="w-4 h-4 accent-amber-500 cursor-pointer"
+                                />
+
+                                <div className={`mt-0.5 flex-shrink-0 ${isSectionActive ? 'text-amber-500' : 'text-zinc-500'}`}>
+                                  {getSectionIcon(section.type)}
+                                </div>
                               </div>
                               <div className="min-w-0 flex-1">
-                                <p className={`font-medium line-clamp-2 mb-0.5 ${isSectionActive ? 'text-zinc-200 font-semibold' : 'text-zinc-400'}`}>
+                                <p
+                                  className={`
+                                    font-medium line-clamp-2 mb-0.5
+                                    ${isSectionActive
+                                      ? 'text-zinc-200 font-semibold'
+                                      : 'text-zinc-400'}
+                                    ${section.completed
+                                      ? 'line-through opacity-60'
+                                      : ''}
+                                  `}
+                                >
                                   {section.title}
                                 </p>
                                 <div className="flex items-center justify-between text-[9px] uppercase tracking-wider text-zinc-500">
@@ -702,4 +807,5 @@ const CourseDetail = () => {
     </Navbar>
   );
 };
+
 export default CourseDetail;

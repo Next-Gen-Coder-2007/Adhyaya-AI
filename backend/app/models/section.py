@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, Text, JSON
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, Boolean, JSON
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -11,5 +11,6 @@ class Section(Base):
     start_time = Column(Float, nullable=True)
     end_time = Column(Float, nullable=True)
     content = Column(JSON)
+    completed = Column(Boolean, default=False)
     module_id = Column(Integer, ForeignKey("modules.id"))
     module = relationship("Module", back_populates="sections")
