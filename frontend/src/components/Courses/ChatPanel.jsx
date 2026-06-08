@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { MessageCircle, X, Send, Sparkles, RotateCcw, ChevronDown } from 'lucide-react';
+import { MessageCircle, X, Send, Sparkles, RotateCcw, BookOpen, Clock } from 'lucide-react';
 import api from '../../api/axios';
 
-// ── Typing animation dots ─────────────────────────────────────────────────────
+
 const TypingDots = () => (
   <span className="inline-flex items-center gap-1 px-1">
     {[0, 1, 2].map(i => (
@@ -15,7 +15,82 @@ const TypingDots = () => (
   </span>
 );
 
-// ── Individual message bubble ─────────────────────────────────────────────────
+
+
+const RenderMarkdown = ({ text }) => {
+  if (!text) return null;
+
+  const lines = text.split('\n');
+
+  return (
+    <div className="space-y-1">
+      {lines.map((line, i) => {
+        
+        const listMatch = line.match(/^(\d+)\.\s+(.*)/);
+        if (listMatch) {
+          return (
+            <div key={i} className="flex gap-1.5">
+              <span className="text-amber-400 font-semibold flex-shrink-0 w-4">{listMatch[1]}.</span>
+              <span>{renderInline(listMatch[2])}</span>
+            </div>
+          );
+        }
+        
+        const bulletMatch = line.match(/^[-•]\s+(.*)/);
+        if (bulletMatch) {
+          return (
+            <div key={i} className="flex gap-1.5">
+              <span className="text-amber-400 flex-shrink-0 mt-0.5">•</span>
+              <span>{renderInline(bulletMatch[1])}</span>
+            </div>
+          );
+        }
+        
+        return line.trim() ? <p key={i}>{renderInline(line)}</p> : <div key={i} className="h-1" />;
+      })}
+    </div>
+  );
+};
+
+function renderInline(text) {
+  
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i} className="font-semibold text-zinc-100">{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith('`') && part.endsWith('`')) {
+      return (
+        <code key={i} className="px-1 py-0.5 rounded text-[10px] bg-zinc-700/80 text-amber-300 font-mono">
+          {part.slice(1, -1)}
+        </code>
+      );
+    }
+    return part;
+  });
+}
+
+
+const SourcePills = ({ sources }) => {
+  if (!sources || sources.length === 0) return null;
+  return (
+    <div className="mt-2 flex flex-wrap gap-1">
+      <span className="text-[9px] text-zinc-600 flex items-center gap-0.5 mr-0.5">
+        <BookOpen className="w-2.5 h-2.5" /> Sources:
+      </span>
+      {sources.map(s => (
+        <span
+          key={s}
+          className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20"
+        >
+          {s}
+        </span>
+      ))}
+    </div>
+  );
+};
+
+
 const MessageBubble = ({ msg }) => {
   const isUser = msg.role === 'user';
 
@@ -35,27 +110,37 @@ const MessageBubble = ({ msg }) => {
           }
         `}
       >
-        {msg.typing ? <TypingDots /> : msg.content}
+        {msg.typing ? (
+          <TypingDots />
+        ) : isUser ? (
+          msg.content
+        ) : (
+          <>
+            <RenderMarkdown text={msg.content} />
+            <SourcePills sources={msg.sources} />
+          </>
+        )}
       </div>
     </div>
   );
 };
 
-// ── Suggested prompts ────────────────────────────────────────────────────────
+
 const SUGGESTIONS = [
   'Summarise the first module',
   'What are the key takeaways?',
   'Explain the hardest concept',
-  'Give me a quick quiz question',
+  'Give me a practice quiz question',
 ];
 
-// ── Main component ────────────────────────────────────────────────────────────
+
 export default function ChatPanel({ courseId, courseStatus }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
       content: "Hi! I'm your AI tutor for this course. Ask me anything about the material — I'll pull answers straight from the content.",
+      sources: [],
     },
   ]);
   const [input, setInput] = useState('');
@@ -65,12 +150,12 @@ export default function ChatPanel({ courseId, courseStatus }) {
   const inputRef = useRef(null);
   const isReady = courseStatus === 'completed';
 
-  // Auto-scroll to bottom
+  
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Focus input when panel opens
+  
   useEffect(() => {
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 150);
@@ -91,6 +176,7 @@ export default function ChatPanel({ courseId, courseStatus }) {
     setLoading(true);
 
     try {
+      
       const history = messages
         .filter(m => !m.typing)
         .slice(-8)
@@ -101,26 +187,32 @@ export default function ChatPanel({ courseId, courseStatus }) {
         history,
       });
 
+      
       setMessages(prev => [
-        ...prev.slice(0, -1), // Remove typing indicator
-        { role: 'assistant', content: data.answer },
+        ...prev.slice(0, -1), 
+        {
+          role: 'assistant',
+          content: data.answer,
+          sources: data.sources || [],
+        },
       ]);
 
       if (!open) setUnread(c => c + 1);
     } catch (err) {
-      const errMsg = err.response?.status === 400
-        ? 'The course is still being processed. Please wait a moment.'
-        : 'Something went wrong. Please try again.';
+      const errMsg =
+        err.response?.status === 400
+          ? 'The course is still being processed. Please wait a moment.'
+          : 'Something went wrong. Please try again.';
       setMessages(prev => [
         ...prev.slice(0, -1),
-        { role: 'assistant', content: errMsg },
+        { role: 'assistant', content: errMsg, sources: [] },
       ]);
     } finally {
       setLoading(false);
     }
   }, [input, loading, messages, courseId, open, isReady]);
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = e => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
@@ -131,6 +223,7 @@ export default function ChatPanel({ courseId, courseStatus }) {
     setMessages([{
       role: 'assistant',
       content: "Chat cleared! What would you like to know about the course?",
+      sources: [],
     }]);
     setInput('');
   };
@@ -139,7 +232,7 @@ export default function ChatPanel({ courseId, courseStatus }) {
 
   return (
     <>
-      {/* Floating toggle button */}
+      {}
       <button
         onClick={() => setOpen(o => !o)}
         className={`
@@ -170,7 +263,7 @@ export default function ChatPanel({ courseId, courseStatus }) {
         )}
       </button>
 
-      {/* Chat panel */}
+      {}
       <div
         className={`
           fixed bottom-20 right-6 z-40 flex flex-col rounded-2xl overflow-hidden shadow-2xl
@@ -178,14 +271,14 @@ export default function ChatPanel({ courseId, courseStatus }) {
           ${open ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'}
         `}
         style={{
-          width: '340px',
-          height: '500px',
+          width: '360px',
+          height: '520px',
           background: 'rgba(18, 18, 20, 0.97)',
           border: '1px solid rgba(255, 255, 255, 0.07)',
           backdropFilter: 'blur(16px)',
         }}
       >
-        {/* Header */}
+        {}
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center">
@@ -207,16 +300,18 @@ export default function ChatPanel({ courseId, courseStatus }) {
           </button>
         </div>
 
-        {/* Messages */}
+        {}
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
           {messages.map((msg, i) => (
             <MessageBubble key={i} msg={msg} />
           ))}
 
-          {/* Suggested prompts */}
+          {}
           {showSuggestions && isReady && (
             <div className="pt-1 space-y-1.5">
-              <p className="text-[10px] text-zinc-600 uppercase tracking-wider font-medium pl-8">Try asking</p>
+              <p className="text-[10px] text-zinc-600 uppercase tracking-wider font-medium pl-8">
+                Try asking
+              </p>
               {SUGGESTIONS.map(s => (
                 <button
                   key={s}
@@ -232,7 +327,7 @@ export default function ChatPanel({ courseId, courseStatus }) {
           <div ref={bottomRef} />
         </div>
 
-        {/* Input area */}
+        {}
         <div className="px-3 py-3 border-t border-white/5">
           {!isReady ? (
             <div className="flex items-center justify-center gap-2 py-2 text-[11px] text-zinc-500">
@@ -240,7 +335,7 @@ export default function ChatPanel({ courseId, courseStatus }) {
               Course is still generating…
             </div>
           ) : (
-            <div className="flex items-end gap-2 rounded-xl px-3 py-2 bg-zinc-800/80 border border-white/10 transition-colors">
+            <div className="flex items-end gap-2 rounded-xl px-3 py-2 bg-zinc-800/80 border border-white/10 transition-colors focus-within:border-amber-500/30">
               <textarea
                 ref={inputRef}
                 value={input}
@@ -258,7 +353,7 @@ export default function ChatPanel({ courseId, courseStatus }) {
                 className={`
                   flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-150
                   ${input.trim() && !loading
-                    ? 'bg-gradient-to-br from-amber-400 to-amber-600'
+                    ? 'bg-gradient-to-br from-amber-400 to-amber-600 hover:opacity-90'
                     : 'bg-zinc-700/50'
                   }
                 `}
@@ -268,7 +363,7 @@ export default function ChatPanel({ courseId, courseStatus }) {
             </div>
           )}
           <p className="text-[9px] text-zinc-700 text-center mt-1.5">
-            Answers are based on this course's content only
+            Answers are grounded in this course's content only
           </p>
         </div>
       </div>

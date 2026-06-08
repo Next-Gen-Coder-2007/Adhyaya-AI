@@ -10,7 +10,6 @@ from app.middleware.auth import get_current_user
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
-
 @router.post("/register")
 def register(data: Register, db: Session = Depends(get_db)):
 
