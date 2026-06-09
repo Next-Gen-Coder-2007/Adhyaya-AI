@@ -36,6 +36,7 @@ const EmptySlot = ({ label }) => (
 const Dashboard = () => {
   const { user } = useAuth();
   const [recentCourses, setRecentCourses] = useState([]);
+  const [courses, setCourses] = useState([]);
 
   useEffect(() => {
     const fetchRecentCourses = async () => {
@@ -43,24 +44,59 @@ const Dashboard = () => {
         const response = await api.get('/courses', {
           withCredentials: true,
         });
-
         const latestCourses = response.data.slice(-4).reverse();
-
         setRecentCourses(latestCourses);
-
+        setCourses(response.data)
       } catch (err) {
         console.error(err);
       }
     };
-
     fetchRecentCourses();
   }, []);
 
+  const getSections = course =>
+    course.modules.flatMap(m => m.sections);
+
+  const totalCourses = courses.length;
+
+  const completedCourses = courses.filter(course =>
+    course.status === "completed" &&
+    getSections(course).every(s => s.completed)
+  ).length;
+
+  const pendingCourses = courses.filter(
+    course => course.status !== "completed"
+  ).length;
+
+  const incompleteCourses = courses.filter(course =>
+    getSections(course).some(s => !s.completed)
+  ).length;
+
   const stats = [
-    { label: 'Enrolled Courses', value: user?.stats?.enrolled ?? null, icon: BookOpen,    accent: 'bg-amber-500'  },
-    { label: 'Completed',        value: user?.stats?.completed ?? null, icon: Flame,       accent: 'bg-green-500'  },
-    { label: 'In Progress',      value: user?.stats?.ongoing  ?? null, icon: Clock,       accent: 'bg-blue-500'   },
-    { label: 'Streak (days)',    value: user?.stats?.streak   ?? null, icon: TrendingUp,  accent: 'bg-violet-500' },
+    { 
+      label: 'Created Courses', 
+      value: totalCourses ?? null, 
+      icon: BookOpen,    
+      accent: 'bg-amber-500'  
+    },
+    { 
+      label: 'Completed',
+      value: completedCourses ?? null,
+      icon: Flame,
+      accent: 'bg-green-500'  
+    },
+    { 
+      label: 'In Progress',      
+      value: incompleteCourses ?? null, 
+      icon: Clock,       
+      accent: 'bg-blue-500'   
+    },
+    { 
+      label: 'Generating',    
+      value: pendingCourses ?? null, 
+      icon: TrendingUp,  
+      accent: 'bg-violet-500' 
+    },
   ];
 
   return (

@@ -1,33 +1,13 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
-  Bell,
-  Shield,
-  Globe,
   Moon,
-  Sun,
   User,
   Mail,
   Lock,
-  Check,
-  X,
   ChevronRight,
-  Settings as SettingsIcon,
-  BookOpen,
-  Clock,
-  Flame,
-  Eye,
-  EyeOff,
-  Volume2,
-  VolumeX,
-  MailOpen,
-  MailCheck,
-  AlertTriangle,
   Palette,
   LayoutDashboard,
-  BarChart3,
-  PlayCircle,
-  Heart,
 } from 'lucide-react';
 import Navbar from '../components/Dashboard/Navbar';
 
@@ -71,25 +51,7 @@ const ToggleSetting = ({ label, description, icon: Icon, isEnabled, onToggle }) 
 const Settings = () => {
   const { user, updateUser } = useAuth();
   const [settings, setSettings] = useState({
-    notifications: user?.settings?.notifications ?? true,
     darkMode: user?.settings?.darkMode ?? true,
-    language: user?.settings?.language ?? 'en',
-    soundEffects: user?.settings?.soundEffects ?? true,
-    animations: user?.settings?.animations ?? true,
-
-    dailyReminders: user?.settings?.dailyReminders ?? true,
-    autoPlayLessons: user?.settings?.autoPlayLessons ?? false,
-    showProgress: user?.settings?.showProgress ?? true,
-    difficultyLevel: user?.settings?.difficultyLevel ?? 'medium',
-
-    privacy: user?.settings?.privacy ?? 'public',
-    showEmail: user?.settings?.showEmail ?? false,
-    showActivity: user?.settings?.showActivity ?? true,
-
-    twoFactorAuth: user?.settings?.twoFactorAuth ?? false,
-    loginAlerts: user?.settings?.loginAlerts ?? true,
-    sessionTimeout: user?.settings?.sessionTimeout ?? 30,
-
     themeColor: user?.settings?.themeColor ?? 'amber',
     fontSize: user?.settings?.fontSize ?? 'medium',
     layoutMode: user?.settings?.layoutMode ?? 'grid',
@@ -124,141 +86,6 @@ const Settings = () => {
               isEnabled={settings.darkMode}
               onToggle={() => handleToggle('darkMode')}
             />
-            <ToggleSetting
-              label="Sound Effects"
-              description="Enable sound effects for interactions."
-              icon={Volume2}
-              isEnabled={settings.soundEffects}
-              onToggle={() => handleToggle('soundEffects')}
-            />
-            <ToggleSetting
-              label="Animations"
-              description="Enable smooth animations and transitions."
-              icon={Flame}
-              isEnabled={settings.animations}
-              onToggle={() => handleToggle('animations')}
-            />
-            <SettingItem
-              label="Language"
-              description="Set your preferred language."
-              icon={Globe}
-            >
-              <select
-                value={settings.language}
-                onChange={(e) => handleSelect('language', e.target.value)}
-                className="mt-2 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500 focus:outline-none text-sm text-white"
-              >
-                <option value="en">English</option>
-                <option value="hi">Hindi</option>
-                <option value="es">Spanish</option>
-                <option value="fr">French</option>
-                <option value="de">German</option>
-              </select>
-            </SettingItem>
-          </SettingSection>
-
-          <SettingSection title="Learning Preferences">
-            <ToggleSetting
-              label="Daily Reminders"
-              description="Receive daily reminders to continue learning."
-              icon={Bell}
-              isEnabled={settings.dailyReminders}
-              onToggle={() => handleToggle('dailyReminders')}
-            />
-            <ToggleSetting
-              label="Auto-Play Lessons"
-              description="Automatically play the next lesson in a course."
-              icon={PlayCircle}
-              isEnabled={settings.autoPlayLessons}
-              onToggle={() => handleToggle('autoPlayLessons')}
-            />
-            <ToggleSetting
-              label="Show Progress"
-              description="Display your learning progress in courses."
-              icon={BarChart3}
-              isEnabled={settings.showProgress}
-              onToggle={() => handleToggle('showProgress')}
-            />
-            <SettingItem
-              label="Difficulty Level"
-              description="Set the default difficulty for new courses."
-              icon={AlertTriangle}
-            >
-              <select
-                value={settings.difficultyLevel}
-                onChange={(e) => handleSelect('difficultyLevel', e.target.value)}
-                className="mt-2 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500 focus:outline-none text-sm text-white"
-              >
-                <option value="beginner">Beginner</option>
-                <option value="medium">Medium</option>
-                <option value="advanced">Advanced</option>
-              </select>
-            </SettingItem>
-          </SettingSection>
-
-          <SettingSection title="Privacy">
-            <SettingItem
-              label="Profile Visibility"
-              description="Choose who can see your profile and activity."
-              icon={Shield}
-            >
-              <select
-                value={settings.privacy}
-                onChange={(e) => handleSelect('privacy', e.target.value)}
-                className="mt-2 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500 focus:outline-none text-sm text-white"
-              >
-                <option value="public">Public</option>
-                <option value="friends">Friends Only</option>
-                <option value="private">Private</option>
-              </select>
-            </SettingItem>
-            <ToggleSetting
-              label="Show Email"
-              description="Allow others to see your email address."
-              icon={MailOpen}
-              isEnabled={settings.showEmail}
-              onToggle={() => handleToggle('showEmail')}
-            />
-            <ToggleSetting
-              label="Show Activity"
-              description="Display your learning activity to others."
-              icon={Eye}
-              isEnabled={settings.showActivity}
-              onToggle={() => handleToggle('showActivity')}
-            />
-          </SettingSection>
-
-          <SettingSection title="Security">
-            <ToggleSetting
-              label="Two-Factor Authentication"
-              description="Add an extra layer of security to your account."
-              icon={Lock}
-              isEnabled={settings.twoFactorAuth}
-              onToggle={() => handleToggle('twoFactorAuth')}
-            />
-            <ToggleSetting
-              label="Login Alerts"
-              description="Receive alerts for new logins to your account."
-              icon={Bell}
-              isEnabled={settings.loginAlerts}
-              onToggle={() => handleToggle('loginAlerts')}
-            />
-            <SettingItem
-              label="Session Timeout"
-              description="Automatically log out after inactivity (in minutes)."
-              icon={Clock}
-            >
-              <select
-                value={settings.sessionTimeout}
-                onChange={(e) => handleSelect('sessionTimeout', e.target.value)}
-                className="mt-2 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500 focus:outline-none text-sm text-white"
-              >
-                <option value="15">15 minutes</option>
-                <option value="30">30 minutes</option>
-                <option value="60">1 hour</option>
-                <option value="120">2 hours</option>
-              </select>
-            </SettingItem>
           </SettingSection>
 
           <SettingSection title="Appearance">
