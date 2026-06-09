@@ -149,6 +149,11 @@ const CourseDetail = () => {
     }
   };
 
+  const renderBoldText = (text) => {
+    if (!text) return '';
+    return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  };
+
   const toggleSectionCompletion = async (sectionId) => {
     try {
       const response = await api.patch(
@@ -657,8 +662,12 @@ const CourseDetail = () => {
                   <div className="space-y-4">
                     <div className="bg-zinc-950/40 border border-zinc-800/60 p-4 rounded-xl">
                       <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-2">Synopsis Overview</h4>
-                      <p className="text-zinc-300 text-xs leading-relaxed font-normal">{activeSection.content?.summary}</p>
+                      <p
+                        className="text-zinc-300 text-xs leading-relaxed font-normal"
+                        dangerouslySetInnerHTML={{ __html: renderBoldText(activeSection.content?.summary || '') }}
+                      />
                     </div>
+
                     {activeSection.content?.key_takeaways?.length > 0 && (
                       <div className="bg-zinc-950/20 border border-zinc-800/40 p-4 rounded-xl space-y-2">
                         <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Core Takeaways Ledger</h4>
@@ -666,7 +675,10 @@ const CourseDetail = () => {
                           {activeSection.content.key_takeaways.map((takeaway, tIndex) => (
                             <li key={tIndex} className="text-xs text-zinc-400 flex items-start gap-2">
                               <span className="text-amber-500 font-bold">•</span>
-                              <span className="leading-relaxed">{takeaway}</span>
+                              <span
+                                className="leading-relaxed"
+                                dangerouslySetInnerHTML={{ __html: renderBoldText(takeaway) }}
+                              />
                             </li>
                           ))}
                         </ul>

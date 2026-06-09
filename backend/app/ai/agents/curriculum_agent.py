@@ -144,21 +144,15 @@ def _generate_sections_for_module(module: Dict, transcript_chunk: List[Dict]) ->
             "content": text
         })
         print(f"[SECTION] Added video section: {section_titles[i]} ({start:.2f}s - {end:.2f}s)")
-
     print(f"[MODULE] Generating quiz/assignment/summary for module: {module['title']}")
-    with ThreadPoolExecutor(max_workers=3) as executor:
-        future_quiz = executor.submit(quiz_agent.generate_quiz, module_content)
-        future_assignment = executor.submit(assignment_agent.generate_assignment, module_content)
-        future_summary = executor.submit(summary_agent.generate_summary, module_content)
+    quiz       = quiz_agent.generate_quiz(module_content)
+    assignment = assignment_agent.generate_assignment(module_content)
+    summary    = summary_agent.generate_summary(module_content)
 
-        quiz = future_quiz.result()
-        assignment = future_assignment.result()
-        summary = future_summary.result()
-
-        sections.append({"type": "quiz", "title": f"Quiz: {module['title']}", "content": quiz})
-        sections.append({"type": "assignment", "title": f"Assignment: {module['title']}", "content": assignment})
-        sections.append({"type": "summary", "title": f"Summary: {module['title']}", "content": summary})
-        print(f"[MODULE] Added quiz, assignment, and summary for module: {module['title']}")
+    sections.append({"type": "quiz",       "title": f"Quiz: {module['title']}",       "content": quiz})
+    sections.append({"type": "assignment", "title": f"Assignment: {module['title']}", "content": assignment})
+    sections.append({"type": "summary",    "title": f"Summary: {module['title']}",    "content": summary})
+    print(f"[MODULE] Added quiz, assignment, and summary for module: {module['title']}")
 
     print(f"[MODULE] Completed sections for module: {module['title']} (Total sections: {len(sections)})")
     return sections
