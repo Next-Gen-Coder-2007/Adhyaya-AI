@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from typing import List
-from pydantic import BaseModel
 
 from app.core.database import get_db
 from app.models.course import Course
@@ -16,8 +15,6 @@ from app.ai.agents.chat_agent import chat as rag_chat
 from app.models.user import User
 
 router = APIRouter(prefix="/courses", tags=["Courses"])
-
-
 
 def generate_course_modules(
     course_id: int,

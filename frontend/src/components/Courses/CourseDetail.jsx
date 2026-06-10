@@ -707,12 +707,6 @@ const CourseDetail = () => {
                 </div>
               </div>
             )}
-            {activeSection?.type === 'video' && (
-              <div className="bg-zinc-900/10 border border-zinc-800 rounded-xl p-5 space-y-1">
-                <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Lecture Outline Context</h3>
-                <p className="text-zinc-400 text-xs leading-relaxed font-normal">{activeSection.content}</p>
-              </div>
-            )}
           </div>
           <div className="bg-zinc-900/20 border border-zinc-800 rounded-xl overflow-hidden flex flex-col shadow-sm">
             <div className="p-4 border-b border-zinc-800 bg-zinc-900/40 flex items-center justify-between">

@@ -1,8 +1,11 @@
 from fastapi import Request, HTTPException
 from jose import jwt, JWTError
-from app.core.config import settings
 from app.models.user import User
 from app.core.database import SessionLocal
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def get_current_user(request: Request):
     token = request.cookies.get("access_token")
@@ -11,7 +14,7 @@ def get_current_user(request: Request):
         raise HTTPException(401, "Not authenticated")
 
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(token, os.getenv("SECRET_KEY"), algorithms=[os.getenv("ALGORITHM")])
         email = payload.get("sub")
 
         db = SessionLocal()

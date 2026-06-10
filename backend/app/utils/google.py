@@ -1,12 +1,14 @@
 import httpx
 from fastapi import HTTPException
+import os
+from dotenv import load_dotenv
 
-GOOGLE_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
+load_dotenv()
 
 async def verify_google(access_token: str):
     async with httpx.AsyncClient() as client:
         res = await client.get(
-            GOOGLE_URL,
+            os.getenv("GOOGLE_URL"),
             headers={"Authorization": f"Bearer {access_token}"}
         )
 

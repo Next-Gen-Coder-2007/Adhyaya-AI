@@ -1,7 +1,11 @@
 from passlib.context import CryptContext
 from jose import jwt
 from datetime import datetime, timedelta
-from app.core.config import settings
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -13,4 +17,4 @@ def create_token(data: dict):
     payload = data.copy()
     payload["exp"] = datetime.utcnow() + timedelta(hours=1)
 
-    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    return jwt.encode(payload, os.getenv("SECRET_KEY"), algorithm=os.getenv("ALGORITHM"))
