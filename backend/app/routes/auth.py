@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, Response, HTTPException
+from fastapi import APIRouter, Depends, Response, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.user import User
-from app.schemas.auth import Register, Login, GoogleLogin
+from app.schemas.auth import Register, Login, GoogleLogin, UserUpdate
 from app.core.security import hash_password, verify_password, create_token
 from app.utils.google import verify_google
 from app.middleware.auth import get_current_user
@@ -99,3 +99,53 @@ def me(current_user: User = Depends(get_current_user)):
 def logout(response: Response):
     response.delete_cookie("access_token")
     return {"message": "Logged out"}
+
+@router.put("/me")
+def update_profile(
+    data: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    db_user = db.query(User).filter(User.id == current_user.id).first()
+
+    if not db_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    if db_user.provider == "google":
+        if data.email or data.password:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Google users cannot update email or password. Only name is editable.",
+            )
+
+    if data.email and data.email != db_user.email:
+        existing_user = db.query(User).filter(User.email == data.email).first()
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already in use",
+            )
+
+    if data.name:
+        db_user.name = data.name
+
+    if data.email:
+        db_user.email = data.email
+
+    if data.password:
+        db_user.hashed_password = hash_password(data.password)
+
+    db.commit()
+    db.refresh(db_user)
+
+    return {
+        "message": "Profile updated successfully",
+        "user": {
+            "email": db_user.email,
+            "name": db_user.name,
+            "provider": db_user.provider,
+        },
+    }
