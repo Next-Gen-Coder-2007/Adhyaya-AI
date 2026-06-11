@@ -170,7 +170,6 @@ const Profile = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column: Profile Info */}
           <div className="lg:col-span-1 rounded-2xl bg-zinc-950 border border-zinc-900 p-6">
             <div className="flex flex-col items-center gap-4">
               <Avatar name={userData.name} size={10} />
@@ -207,19 +206,9 @@ const Profile = () => {
                   placeholder="Enter new password"
                 />
               )}
-              <div className="flex items-center gap-3 p-4 rounded-xl bg-zinc-950 border border-zinc-900">
-                <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-amber-500" />
-                </div>
-                <div>
-                  <p className="text-xs text-zinc-600 uppercase tracking-widest">Joined</p>
-                  <p className="text-base text-white">{user?.joinedDate || 'N/A'}</p>
-                </div>
-              </div>
             </div>
           </div>
 
-          {/* Right Column: Stats */}
           <div className="lg:col-span-2 rounded-2xl bg-zinc-950 border border-zinc-900 p-6">
             <h2 className="text-lg font-semibold text-zinc-300 mb-6">Your Stats</h2>
             <div className="grid grid-cols-2 gap-4">

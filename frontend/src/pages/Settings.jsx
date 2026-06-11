@@ -1,72 +1,74 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import {
-  Moon,
-  User,
-  Mail,
-  Lock,
-  ChevronRight,
-  Palette,
-  LayoutDashboard,
-} from 'lucide-react';
+import { Moon, Palette, LayoutDashboard, ALargeSmall } from 'lucide-react';
 import Navbar from '../components/Dashboard/Navbar';
+import api from '../api/axios';
 
-const SettingSection = ({ title, children }) => (
-  <div className="rounded-2xl bg-zinc-950 border border-zinc-900 p-6">
-    <h2 className="text-lg font-semibold text-zinc-300 mb-4">{title}</h2>
-    {children}
-  </div>
-);
-
-const SettingItem = ({ label, description, icon: Icon, children }) => (
-  <div className="flex items-start gap-4 p-4 rounded-xl hover:bg-white/5 transition-colors">
+const SettingCard = ({ label, description, icon: Icon, children }) => (
+  <div className="flex items-center gap-4 p-5 rounded-xl bg-zinc-950 border border-zinc-900 hover:border-zinc-700 transition-colors">
     <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
       <Icon className="w-5 h-5 text-amber-500" />
     </div>
     <div className="flex-1 min-w-0">
-      <p className="text-base font-medium text-white">{label}</p>
-      {description && <p className="text-sm text-zinc-600 mt-1">{description}</p>}
-      {children}
+      <p className="text-sm font-medium text-white">{label}</p>
+      <p className="text-xs text-zinc-500 mt-0.5">{description}</p>
     </div>
+    <div className="shrink-0">{children}</div>
   </div>
 );
 
-const ToggleSetting = ({ label, description, icon: Icon, isEnabled, onToggle }) => (
-  <SettingItem label={label} description={description} icon={Icon}>
-    <button
-      onClick={onToggle}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-        isEnabled ? 'bg-amber-500' : 'bg-zinc-800'
+const Toggle = ({ isEnabled, onToggle }) => (
+  <button
+    onClick={onToggle}
+    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+      isEnabled ? 'bg-amber-500' : 'bg-zinc-800'
+    }`}
+  >
+    <span
+      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+        isEnabled ? 'translate-x-6' : 'translate-x-1'
       }`}
-    >
-      <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-          isEnabled ? 'translate-x-6' : 'translate-x-1'
-        }`}
-      />
-    </button>
-  </SettingItem>
+    />
+  </button>
+);
+
+const Select = ({ value, onChange, options }) => (
+  <select
+    value={value}
+    onChange={(e) => onChange(e.target.value)}
+    className="px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500 focus:outline-none text-sm text-white cursor-pointer"
+  >
+    {options.map(({ value, label }) => (
+      <option key={value} value={value}>{label}</option>
+    ))}
+  </select>
 );
 
 const Settings = () => {
-  const { user, updateUser } = useAuth();
+  const { user } = useAuth();
   const [settings, setSettings] = useState({
-    darkMode: user?.settings?.darkMode ?? true,
-    themeColor: user?.settings?.themeColor ?? 'amber',
-    fontSize: user?.settings?.fontSize ?? 'medium',
-    layoutMode: user?.settings?.layoutMode ?? 'grid',
+    darkMode:    user?.settings?.darkMode    ?? true,
+    themeColor:  user?.settings?.themeColor  ?? 'amber',
+    fontSize:    user?.settings?.fontSize    ?? 'medium',
+    layoutMode:  user?.settings?.layoutMode  ?? 'grid',
   });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
 
-  const handleToggle = (key) => {
-    const newSettings = { ...settings, [key]: !settings[key] };
-    setSettings(newSettings);
-    updateUser({ settings: newSettings });
-  };
+  const update = async (key, value) => {
+    const next = { ...settings, [key]: value };
+    setSettings(next);           // optimistic update
+    setError(null);
 
-  const handleSelect = (key, value) => {
-    const newSettings = { ...settings, [key]: value };
-    setSettings(newSettings);
-    updateUser({ settings: newSettings });
+    try {
+      setSaving(true);
+      await api.patch('/auth/me/settings', { [key]: value });
+    } catch (err) {
+      setSettings(settings);     // revert on failure
+      setError('Failed to save. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -77,106 +79,60 @@ const Settings = () => {
           <p className="mt-2 text-sm text-zinc-600">Customize your experience.</p>
         </div>
 
-        <div className="space-y-6">
-          <SettingSection title="Preferences">
-            <ToggleSetting
-              label="Dark Mode"
-              description="Enable dark theme for the application."
-              icon={Moon}
+        {error && (
+          <p className="text-sm text-red-400">{error}</p>
+        )}
+
+        <div className="space-y-3">
+          <SettingCard label="Dark mode" description="Enable dark theme for the application." icon={Moon}>
+            <Toggle
               isEnabled={settings.darkMode}
-              onToggle={() => handleToggle('darkMode')}
+              onToggle={() => update('darkMode', !settings.darkMode)}
             />
-          </SettingSection>
+          </SettingCard>
 
-          <SettingSection title="Appearance">
-            <SettingItem
-              label="Theme Color"
-              description="Choose the primary color theme for the app."
-              icon={Palette}
-            >
-              <select
-                value={settings.themeColor}
-                onChange={(e) => handleSelect('themeColor', e.target.value)}
-                className="mt-2 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500 focus:outline-none text-sm text-white"
-              >
-                <option value="amber">Amber</option>
-                <option value="blue">Blue</option>
-                <option value="green">Green</option>
-                <option value="purple">Purple</option>
-                <option value="pink">Pink</option>
-              </select>
-            </SettingItem>
-            <SettingItem
-              label="Font Size"
-              description="Adjust the text size for better readability."
-              icon={User}
-            >
-              <select
-                value={settings.fontSize}
-                onChange={(e) => handleSelect('fontSize', e.target.value)}
-                className="mt-2 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500 focus:outline-none text-sm text-white"
-              >
-                <option value="small">Small</option>
-                <option value="medium">Medium</option>
-                <option value="large">Large</option>
-              </select>
-            </SettingItem>
-            <SettingItem
-              label="Layout Mode"
-              description="Choose how courses and content are displayed."
-              icon={LayoutDashboard}
-            >
-              <select
-                value={settings.layoutMode}
-                onChange={(e) => handleSelect('layoutMode', e.target.value)}
-                className="mt-2 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500 focus:outline-none text-sm text-white"
-              >
-                <option value="grid">Grid View</option>
-                <option value="list">List View</option>
-                <option value="compact">Compact View</option>
-              </select>
-            </SettingItem>
-          </SettingSection>
+          <SettingCard label="Theme color" description="Choose the primary color for the app." icon={Palette}>
+            <Select
+              value={settings.themeColor}
+              onChange={(v) => update('themeColor', v)}
+              options={[
+                { value: 'amber',  label: 'Amber'  },
+                { value: 'blue',   label: 'Blue'   },
+                { value: 'green',  label: 'Green'  },
+                { value: 'purple', label: 'Purple' },
+                { value: 'pink',   label: 'Pink'   },
+              ]}
+            />
+          </SettingCard>
 
-          <SettingSection title="Account">
-            <SettingItem
-              label="Change Name"
-              description="Update your display name."
-              icon={User}
-            >
-              <a
-                href="/profile"
-                className="flex items-center gap-1 text-sm text-amber-500 hover:text-amber-400 transition-colors mt-2"
-              >
-                Edit <ChevronRight className="w-4 h-4" />
-              </a>
-            </SettingItem>
-            <SettingItem
-              label="Change Email"
-              description="Update your email address."
-              icon={Mail}
-            >
-              <a
-                href="/profile"
-                className="flex items-center gap-1 text-sm text-amber-500 hover:text-amber-400 transition-colors mt-2"
-              >
-                Edit <ChevronRight className="w-4 h-4" />
-              </a>
-            </SettingItem>
-            <SettingItem
-              label="Change Password"
-              description="Update your account password."
-              icon={Lock}
-            >
-              <a
-                href="/change-password"
-                className="flex items-center gap-1 text-sm text-amber-500 hover:text-amber-400 transition-colors mt-2"
-              >
-                Edit <ChevronRight className="w-4 h-4" />
-              </a>
-            </SettingItem>
-          </SettingSection>
+          <SettingCard label="Font size" description="Adjust text size for better readability." icon={ALargeSmall}>
+            <Select
+              value={settings.fontSize}
+              onChange={(v) => update('fontSize', v)}
+              options={[
+                { value: 'small',  label: 'Small'  },
+                { value: 'medium', label: 'Medium' },
+                { value: 'large',  label: 'Large'  },
+              ]}
+            />
+          </SettingCard>
+
+          <SettingCard label="Layout mode" description="Choose how courses and content are displayed." icon={LayoutDashboard}>
+            <Select
+              value={settings.layoutMode}
+              onChange={(v) => update('layoutMode', v)}
+              options={[
+                { value: 'grid',    label: 'Grid view'    },
+                { value: 'list',    label: 'List view'    },
+                { value: 'compact', label: 'Compact view' },
+              ]}
+            />
+          </SettingCard>
         </div>
+
+        {saving && (
+          <p className="text-xs text-zinc-500">Saving...</p>
+        )}
       </div>
     </Navbar>
   );

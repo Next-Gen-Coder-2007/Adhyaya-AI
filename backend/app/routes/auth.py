@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.user import User
-from app.schemas.auth import Register, Login, GoogleLogin, UserUpdate
+from app.schemas.auth import Register, Login, GoogleLogin, UserUpdate, UserSettingsUpdate
 from app.core.security import hash_password, verify_password, create_token
 from app.utils.google import verify_google
 from app.middleware.auth import get_current_user
@@ -91,7 +91,8 @@ def me(current_user: User = Depends(get_current_user)):
     return {
         "email": current_user.email,
         "name": current_user.name,
-        "provider": current_user.provider
+        "provider": current_user.provider,
+        "settings": current_user.settings
     }
 
 
@@ -149,3 +150,31 @@ def update_profile(
             "provider": db_user.provider,
         },
     }
+
+
+@router.patch("/me/settings", response_model=dict)
+def update_user_settings(
+    settings: UserSettingsUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    db_user = db.query(User).filter(User.id == current_user.id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    current_settings = dict(db_user.settings or {})
+
+    if settings.darkMode is not None:
+        current_settings["darkMode"] = settings.darkMode
+    if settings.themeColor is not None:
+        current_settings["themeColor"] = settings.themeColor
+    if settings.fontSize is not None:
+        current_settings["fontSize"] = settings.fontSize
+    if settings.layoutMode is not None:
+        current_settings["layoutMode"] = settings.layoutMode
+
+    db_user.settings = current_settings
+    db.commit()
+    db.refresh(db_user)
+
+    return {"message": "Settings updated successfully", "settings": db_user.settings}
