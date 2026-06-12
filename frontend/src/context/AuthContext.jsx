@@ -1,3 +1,4 @@
+// frontend/src/context/AuthContext.jsx
 import { createContext, useContext, useState, useEffect } from "react";
 import api from "../api/axios";
 import Loader from "../components/Loader";
@@ -13,13 +14,12 @@ export const AuthProvider = ({ children }) => {
       try {
         const res = await api.get("/auth/me");
         setUser(res.data);
-      } catch (err) {
+      } catch {
         setUser(null);
       } finally {
         setInitialized(true);
       }
     };
-
     checkAuth();
   }, []);
 
@@ -34,19 +34,17 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  if (!initialized) {
-    return <Loader />;
-  }
+  const updateSettings = (newSettings) => {
+    setUser((prev) => ({
+      ...prev,
+      settings: { ...prev.settings, ...newSettings },
+    }));
+  };
+
+  if (!initialized) return <Loader />;
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated: !!user,
-        loginAuth,
-        logout,
-      }}
-    >
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, loginAuth, logout, updateSettings }}>
       {children}
     </AuthContext.Provider>
   );

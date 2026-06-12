@@ -24,3 +24,27 @@
     background: #d97706;
   }
 }
+
+/* index.css */
+:root {
+  --color-accent: #f59e0b;
+  --bg-primary:    #09090b;   /* zinc-950 */
+  --bg-secondary:  #18181b;   /* zinc-900 */
+  --bg-tertiary:   #27272a;   /* zinc-800 */
+  --text-primary:  #ffffff;
+  --text-muted:    #71717a;   /* zinc-500 */
+  --text-subtle:   #52525b;   /* zinc-600 */
+  --border:        #27272a;   /* zinc-800 */
+  --border-subtle: #18181b;   /* zinc-900 */
+}
+
+body.light {
+  --bg-primary:    #ffffff;
+  --bg-secondary:  #f4f4f5;   /* zinc-100 */
+  --bg-tertiary:   #e4e4e7;   /* zinc-200 */
+  --text-primary:  #09090b;
+  --text-muted:    #71717a;
+  --text-subtle:   #a1a1aa;
+  --border:        #e4e4e7;
+  --border-subtle: #f4f4f5;
+}

@@ -14,6 +14,14 @@ const Courses = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
+  const layout = user?.settings?.layoutMode ?? 'grid';
+
+  const gridClass = layout === 'list'
+    ? 'flex flex-col gap-4'
+    : layout === 'compact'
+    ? 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3'
+    : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
+
 
   const fetchCourses = async () => {
     try {
@@ -71,7 +79,7 @@ const Courses = () => {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500" />
           </div>
         ) : filteredCourses.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className={gridClass}>
             {filteredCourses.map((course) => (
               <CourseCard
                 key={course.id}
