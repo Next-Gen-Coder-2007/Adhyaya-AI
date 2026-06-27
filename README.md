@@ -1,4 +1,9 @@
-# Adhyaya AI
+<p align="center">
+  <img src="./frontend/public/logo.png" width="180"/>
+</p>
+
+<h1 align="center">Adhyaya AI</h1>
+
 
 An agentic AI-powered learning platform that transforms YouTube videos and playlists into structured, interactive courses with quizzes, assignments, and a personalized AI tutor.
 
