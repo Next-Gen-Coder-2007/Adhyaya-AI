@@ -224,7 +224,7 @@ const CreateCourseModal = ({ isOpen, onClose, fetchCourses }) => {
         {/* 1-Click Starter Presets */}
         <div className="space-y-2">
           <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
-            ⚡ Quick Starters (One-Click Testing)
+            Quick Starters (One-Click Testing)
           </label>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {STARTER_PRESETS.map((p, idx) => (
@@ -232,11 +232,10 @@ const CreateCourseModal = ({ isOpen, onClose, fetchCourses }) => {
                 key={idx}
                 type="button"
                 onClick={() => handleSelectPreset(p)}
-                className={`p-2.5 rounded-xl border text-xs text-left transition-all cursor-pointer ${
-                  ytLink === p.url
+                className={`p-2.5 rounded-xl border text-xs text-left transition-all cursor-pointer ${ytLink === p.url
                     ? 'bg-amber-500/20 border-amber-500 text-amber-300 font-bold'
                     : 'bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'
-                }`}
+                  }`}
               >
                 <span className="block font-semibold truncate">{p.label}</span>
                 <span className="text-[9px] text-zinc-500 block truncate">1-Click Load</span>

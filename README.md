@@ -1,4 +1,13 @@
+<<<<<<< HEAD
 # Adhyaya AI 🚀
+=======
+<p align="center">
+  <img src="./frontend/public/logo.png" width="180"/>
+</p>
+
+<h1 align="center">Adhyaya AI</h1>
+
+>>>>>>> 74c0b8eedb15f0968a41891edbb42b49e503837a
 
 An agentic AI-powered learning platform that transforms YouTube videos and playlists into structured, interactive courses with section-wise quizzes, practical assignments, live timestamped notes, and an embedded RAG AI tutor.
 
