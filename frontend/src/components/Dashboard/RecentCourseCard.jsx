@@ -28,13 +28,13 @@ const RecentCourseCard = ({ course }) => {
     <div
       onClick={handleClick}
       className="
-        group flex items-center gap-4 p-3 rounded-xl
-        bg-[#0a0a0a] border border-[#1e1e1e]
-        hover:border-amber-600/60 hover:bg-[#121212]
-        transition-all duration-300 cursor-pointer
+        group flex items-center gap-4 p-3.5 rounded-2xl
+        bg-zinc-950 border border-zinc-900
+        hover:border-amber-500/50 hover:bg-zinc-900/60
+        transition-all duration-300 cursor-pointer shadow-sm
       "
     >
-      <div className="w-20 h-12 rounded-lg overflow-hidden shrink-0 bg-zinc-900">
+      <div className="w-20 h-12 rounded-xl overflow-hidden shrink-0 bg-zinc-900 border border-zinc-800">
         <img
           src={course.image_url}
           alt={course.title}
@@ -46,10 +46,10 @@ const RecentCourseCard = ({ course }) => {
       </div>
 
       <div className="flex-1 min-w-0">
-        <h3 className="text-sm font-medium text-zinc-200 truncate group-hover:text-amber-500 transition-colors">
+        <h3 className="text-sm font-bold text-zinc-100 truncate group-hover:text-amber-500 transition-colors">
           {course.title}
         </h3>
-        <p className="text-xs text-zinc-500 line-clamp-1 mt-1">
+        <p className="text-xs text-zinc-400 line-clamp-1 mt-0.5">
           {course.description}
         </p>
 
@@ -73,7 +73,7 @@ const RecentCourseCard = ({ course }) => {
         )}
       </div>
 
-      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 pr-2">
         <PlayCircle className="w-5 h-5 text-amber-500" />
       </div>
     </div>
