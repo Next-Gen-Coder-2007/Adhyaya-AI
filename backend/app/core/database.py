@@ -1,13 +1,11 @@
+import logging
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-import os
-import logging
-from dotenv import load_dotenv
+from app.core.config import settings
 
-load_dotenv()
 logger = logging.getLogger(__name__)
 
-raw_db_url = os.getenv("DATABASE_URL", "sqlite:///./app.db")
+raw_db_url = settings.DATABASE_URL
 
 # 1. Normalize postgres:// to postgresql:// for SQLAlchemy compatibility
 if raw_db_url and raw_db_url.startswith("postgres://"):
@@ -26,8 +24,8 @@ if is_sqlite:
 else:
     # Production database pool settings
     engine_kwargs.update({
-        "pool_size": int(os.getenv("DB_POOL_SIZE", 10)),
-        "max_overflow": int(os.getenv("DB_MAX_OVERFLOW", 20)),
+        "pool_size": settings.DB_POOL_SIZE,
+        "max_overflow": settings.DB_MAX_OVERFLOW,
         "pool_recycle": 1800,
     })
 

@@ -118,11 +118,10 @@ def get_playlist_videos(playlist_url: str) -> list[dict]:
         if not match:
             return []
 
-        playlist_id = match.group(1)
-
-        api_key = os.getenv("YOUTUBE_API_KEY")
+        from app.core.config import settings
+        api_key = settings.YOUTUBE_API_KEY
         if not api_key:
-            logger.warning("[PLAYLIST ERROR] YOUTUBE_API_KEY not set in environment.")
+            logger.warning("[PLAYLIST ERROR] YOUTUBE_API_KEY not configured in settings.")
             return []
 
         youtube = build(

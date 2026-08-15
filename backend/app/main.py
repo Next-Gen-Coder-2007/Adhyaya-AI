@@ -1,4 +1,3 @@
-import os
 import time
 import logging
 from fastapi import FastAPI, Depends, Request
@@ -6,21 +5,28 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
-from app.routes.auth import router as auth_router
-from app.routes.course import router as course_router
+from app.core.config import settings
 from app.core.database import Base, engine, get_db
 from app.models.course import Course, Module, Section
 from app.models.user import User
+from app.routes.auth import router as auth_router
+from app.routes.course import router as course_router
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
 logger = logging.getLogger("adhyaya.api")
 
+# Auto-create table schemas on boot
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title="Adhyaya AI API",
+    title=settings.PROJECT_NAME,
     description="Agentic AI Learning Operating System API powering course synthesis, assessment generation, and RAG tutor",
-    version="2.1.0",
+    version=settings.VERSION,
+    docs_url="/docs",
+    redoc_url="/redoc"
 )
 
 # Process timing and telemetry middleware
@@ -32,37 +38,24 @@ async def add_process_time_header(request: Request, call_next):
     response.headers["X-Process-Time"] = f"{process_time}ms"
     return response
 
+
 # Dynamic Cloud CORS Configuration
-default_origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:3000",
-    "http://localhost:4173",
-]
-
-env_origins = os.getenv("ALLOWED_ORIGINS", "")
-if env_origins:
-    custom_origins = [o.strip() for o in env_origins.split(",") if o.strip()]
-    allowed_origins = list(set(default_origins + custom_origins))
-else:
-    allowed_origins = default_origins
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins if "*" not in allowed_origins else ["*"],
+    allow_origins=settings.ALLOWED_ORIGINS if "*" not in settings.ALLOWED_ORIGINS else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-@app.get("/")
+@app.get("/", tags=["System"])
 def root_status():
     return {
         "status": "online",
-        "name": "Adhyaya AI API",
-        "version": "2.1.0",
-        "environment": os.getenv("ENVIRONMENT", "production"),
+        "name": settings.PROJECT_NAME,
+        "version": settings.VERSION,
+        "environment": settings.ENVIRONMENT,
         "features": [
             "curriculum_generation",
             "rag_tutor",
@@ -76,7 +69,7 @@ def root_status():
     }
 
 
-@app.get("/health")
+@app.get("/health", tags=["System"])
 def health_check(db: Session = Depends(get_db)):
     db_status = "connected"
     try:
@@ -91,7 +84,7 @@ def health_check(db: Session = Depends(get_db)):
     }
 
 
-@app.get("/health/stats")
+@app.get("/health/stats", tags=["System"])
 def health_stats(db: Session = Depends(get_db)):
     try:
         total_courses = db.query(Course).count()
@@ -118,5 +111,6 @@ def health_stats(db: Session = Depends(get_db)):
         }
 
 
+# Mount API routers
 app.include_router(auth_router)
 app.include_router(course_router)

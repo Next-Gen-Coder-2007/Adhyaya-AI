@@ -1,12 +1,10 @@
-import os
 import re
 import time
 import threading
 import logging
 from typing import Optional
-from dotenv import load_dotenv
+from app.core.config import settings
 
-load_dotenv()
 logger = logging.getLogger(__name__)
 
 _groq_instance = None
@@ -19,9 +17,9 @@ def get_groq_llm():
     global _groq_instance
     if _groq_instance is None:
         from langchain_groq import ChatGroq
-        api_key = os.getenv("GROQ_API_KEY")
+        api_key = settings.GROQ_API_KEY
         if not api_key:
-            logger.warning("GROQ_API_KEY not found in environment")
+            logger.warning("GROQ_API_KEY not configured in settings")
         _groq_instance = ChatGroq(
             model="llama-3.3-70b-versatile",
             temperature=0.2,
@@ -34,9 +32,9 @@ def get_gemini_llm():
     global _gemini_instance
     if _gemini_instance is None:
         from langchain_google_genai import ChatGoogleGenerativeAI
-        api_key = os.getenv("GOOGLE_API_KEY")
+        api_key = settings.GOOGLE_API_KEY
         if not api_key:
-            logger.warning("GOOGLE_API_KEY not found in environment")
+            logger.warning("GOOGLE_API_KEY not configured in settings")
         _gemini_instance = ChatGoogleGenerativeAI(
             model="gemini-2.5-flash",
             temperature=0.2,

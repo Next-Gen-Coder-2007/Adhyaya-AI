@@ -1,30 +1,43 @@
-from fastapi import Request, HTTPException
+from fastapi import Request, HTTPException, status
 from jose import jwt, JWTError
 from app.models.user import User
 from app.core.database import SessionLocal
-import os
-from dotenv import load_dotenv
+from app.core.config import settings
 
-load_dotenv()
 
-def get_current_user(request: Request):
+def get_current_user(request: Request) -> User:
     token = request.cookies.get("access_token")
 
     if not token:
-        raise HTTPException(401, "Not authenticated")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required. No session cookie found."
+        )
 
     try:
-        payload = jwt.decode(token, os.getenv("SECRET_KEY"), algorithms=[os.getenv("ALGORITHM")])
-        email = payload.get("sub")
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        email: str = payload.get("sub")
+
+        if not email:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token payload."
+            )
 
         db = SessionLocal()
-        user = db.query(User).filter(User.email == email).first()
-        db.close()
-
-        if not user:
-            raise HTTPException(401, "User not found")
-
-        return user
+        try:
+            user = db.query(User).filter(User.email == email).first()
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="User account not found."
+                )
+            return user
+        finally:
+            db.close()
 
     except JWTError:
-        raise HTTPException(401, "Invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session token has expired or is invalid."
+        )
