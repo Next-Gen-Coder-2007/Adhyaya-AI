@@ -15,7 +15,9 @@ class Course(Base):
     youtube_url = Column(String, nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     status = Column(String, default="processing")
-    is_playlist = Column(Boolean, default=False)  # Default to False
+    error_message = Column(String, nullable=True)
+    is_playlist = Column(Boolean, default=False)
+    notes = Column(Text, default="", nullable=True)
     owner = relationship("User", back_populates="courses")
     modules = relationship(
         "Module",

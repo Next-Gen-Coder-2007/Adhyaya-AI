@@ -47,6 +47,9 @@ class SectionBase(BaseModel):
     end_time: Optional[float] = None
     content: Optional[Any] = None
     completed: bool = False
+    quiz_score: Optional[int] = None
+    quiz_answers: Optional[Any] = None
+    notes: Optional[str] = None
 
 class SectionCreate(SectionBase):
     pass
@@ -58,6 +61,14 @@ class SectionUpdate(BaseModel):
     end_time: Optional[float] = None
     content: Optional[Any] = None
     completed: Optional[bool] = None
+    quiz_score: Optional[int] = None
+    quiz_answers: Optional[Any] = None
+    notes: Optional[str] = None
+
+
+class QuizSubmitRequest(BaseModel):
+    answers: dict
+    score: int
 
 
 class SectionResponse(SectionBase):
