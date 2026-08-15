@@ -8,14 +8,24 @@ from app.ai.services.llm_service import generate_with_gemini, generate_with_groq
 logger = logging.getLogger(__name__)
 
 
-def _parse_retry_after(error_message: str) -> float:
-    m = re.search(r'try again in ([\d.]+)s', error_message)
-    if m:
-        return float(m.group(1)) + 1.0
-    m = re.search(r'try again in ([\d.]+)ms', error_message)
-    if m:
-        return float(m.group(1)) / 1000.0 + 1.0
-    return 30.0
+def _clean_json_string(text: str) -> str:
+    """Robustly cleans and repairs common LLM JSON syntax errors."""
+    if not text:
+        return ""
+
+    # 1. Strip markdown fences like ```json ... ```
+    cleaned = re.sub(r'^```(?:json)?\s*', '', text.strip(), flags=re.IGNORECASE)
+    cleaned = re.sub(r'\s*```$', '', cleaned)
+
+    # 2. Extract JSON block if surrounded by conversational filler
+    json_match = re.search(r'(\{[\s\S]*\}|\[[\s\S]*\])', cleaned)
+    if json_match:
+        cleaned = json_match.group(1)
+
+    # 3. Remove trailing commas before closing braces/brackets: `, }` -> `}` or `, ]` -> `]`
+    cleaned = re.sub(r',\s*([\}\]])', r'\1', cleaned)
+
+    return cleaned.strip()
 
 
 class BaseAgent:
@@ -25,9 +35,9 @@ class BaseAgent:
         self.generate = generate_with_gemini if provider == "gemini" else generate_with_groq
 
     def _clean_json(self, text: str) -> str:
-        return text.strip().replace("```json", "").replace("```", "").strip()
+        return _clean_json_string(text)
 
-    def _invoke_llm(self, prompt: str, max_retries: int = 8) -> Optional[Dict[str, Any]]:
+    def _invoke_llm(self, prompt: str, max_retries: int = 5) -> Optional[Dict[str, Any]]:
         for attempt in range(max_retries):
             try:
                 response = self.generate(prompt)
@@ -36,20 +46,23 @@ class BaseAgent:
 
             except json.JSONDecodeError as e:
                 logger.error(f"JSON Parse Error (Attempt {attempt + 1}/{max_retries}): {e}")
+                # Try fallback repair if needed
+                try:
+                    # Replace single quotes with double quotes if standard JSON failed
+                    repaired = re.sub(r"(?<!\\)'", '"', cleaned)
+                    return json.loads(repaired)
+                except Exception:
+                    pass
+
                 if attempt == max_retries - 1:
+                    logger.error(f"Failed to parse JSON response: {response[:300]}")
                     return None
-                time.sleep(2)
+                time.sleep(1.5)
 
             except Exception as e:
-                error_str = str(e)
-                logger.error(f"LLM Error (Attempt {attempt + 1}/{max_retries}): {error_str}")
+                logger.error(f"LLM Invocation Error (Attempt {attempt + 1}/{max_retries}): {e}")
                 if attempt == max_retries - 1:
                     return None
-                if "rate_limit_exceeded" in error_str or "429" in error_str:
-                    wait = _parse_retry_after(error_str)
-                    logger.info(f"Rate limited. Waiting {wait:.1f}s...")
-                    time.sleep(wait)
-                else:
-                    time.sleep(5)
+                time.sleep(2.0)
 
         return None
