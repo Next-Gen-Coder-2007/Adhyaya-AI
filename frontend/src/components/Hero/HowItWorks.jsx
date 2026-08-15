@@ -32,7 +32,7 @@ const HowItWorks = () => {
     <section className="py-20 lg:py-28 relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
         <div className="text-center space-y-3 max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-[var(--color-accent,#f59e0b)]">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-xs font-semibold text-amber-500">
             <Sparkles className="w-3.5 h-3.5" />
             <span>Seamless Workflow</span>
           </div>
@@ -49,23 +49,23 @@ const HowItWorks = () => {
           {steps.map((item, idx) => (
             <div
               key={idx}
-              className="relative p-6 rounded-3xl bg-zinc-950/80 border border-zinc-900 hover:border-amber-500/30 transition-all duration-300 shadow-xl flex flex-col justify-between group"
+              className="relative p-6 rounded-3xl bg-[var(--bg-secondary,#121215)] border border-[var(--border,rgba(255,255,255,0.08))] hover:border-amber-500/40 transition-all duration-300 shadow-xl flex flex-col justify-between group"
             >
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform" style={{ color: 'var(--color-accent)' }}>
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 group-hover:scale-105 transition-transform">
                     <item.icon className="w-6 h-6" />
                   </div>
-                  <span className="text-2xl font-black text-zinc-700 group-hover:text-zinc-500 transition-colors font-mono">
+                  <span className="text-2xl font-black text-zinc-300 dark:text-zinc-700 group-hover:text-amber-500 transition-colors font-mono">
                     {item.step}
                   </span>
                 </div>
 
-                <h3 className="text-base font-bold text-white group-hover:text-amber-400 transition-colors" style={{ color: 'var(--text-primary)' }}>
+                <h3 className="text-base font-bold text-[var(--text-primary,#ffffff)] group-hover:text-amber-500 transition-colors">
                   {item.title}
                 </h3>
 
-                <p className="text-xs text-zinc-400 leading-relaxed">
+                <p className="text-xs text-[var(--text-secondary,#a1a1aa)] leading-relaxed">
                   {item.description}
                 </p>
               </div>

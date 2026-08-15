@@ -25,7 +25,7 @@ const agents = [
     name: 'Content Structuring Agent',
     role: 'Timeline & Synopses',
     icon: FileText,
-    accent: 'from-blue-500 to-indigo-600',
+    accent: 'from-amber-500 to-amber-600',
     description: 'Maps timeline start/end points, extracts core definitions, and writes comprehensive lesson summaries.',
     capability: 'Synchronizes timestamps with transcript highlights.',
   },
@@ -34,7 +34,7 @@ const agents = [
     name: 'Assessment Generation Agent',
     role: 'Retention & Grading',
     icon: CheckCircle,
-    accent: 'from-emerald-500 to-teal-600',
+    accent: 'from-amber-500 to-amber-600',
     description: 'Generates MCQs, True/False, and conceptual questions with detailed explanation feedback for every section.',
     capability: 'Client-side automated grading with mastery scoring.',
   },
@@ -43,7 +43,7 @@ const agents = [
     name: 'Practical Lab Agent',
     role: 'Hands-on Projects',
     icon: Terminal,
-    accent: 'from-purple-500 to-pink-600',
+    accent: 'from-amber-500 to-amber-600',
     description: 'Creates real-world engineering missions, difficulty tags, milestone checklists, and evaluation rubrics.',
     capability: 'Applied implementation tasks for active skill building.',
   },
@@ -52,7 +52,7 @@ const agents = [
     name: 'Resource Curator Agent',
     role: 'References & Docs',
     icon: Compass,
-    accent: 'from-rose-500 to-orange-600',
+    accent: 'from-amber-500 to-amber-600',
     description: 'Curates external official documentation, cheat sheets, and deep-dive technical articles.',
     capability: 'Expands concept mastery beyond the video stream.',
   },
@@ -61,7 +61,7 @@ const agents = [
     name: 'RAG AI Tutor Agent',
     role: 'Conversational Companion',
     icon: Bot,
-    accent: 'from-amber-400 to-emerald-500',
+    accent: 'from-amber-500 to-amber-600',
     description: 'Retrieves relevant transcript chunks to answer questions with exact [MM:SS] clickable video timestamp links.',
     capability: 'Context-grounded multi-turn conversational RAG.',
   },
@@ -74,7 +74,7 @@ const AIAgents = () => {
     <section id="ai-agents" className="py-20 lg:py-28 relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
         <div className="text-center space-y-3 max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-[var(--color-accent,#f59e0b)]">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-xs font-semibold text-amber-500">
             <Sparkles className="w-3.5 h-3.5" />
             <span>Autonomous Intelligence</span>
           </div>
@@ -96,8 +96,8 @@ const AIAgents = () => {
                 onClick={() => setActiveAgent(agent)}
                 className={`p-7 rounded-3xl border transition-all duration-300 cursor-pointer flex flex-col justify-between group ${
                   isSelected
-                    ? 'bg-zinc-900/90 border-amber-500/50 shadow-2xl scale-[1.02]'
-                    : 'bg-zinc-950/70 border-zinc-900 hover:border-zinc-800 hover:bg-zinc-900/40'
+                    ? 'bg-[var(--bg-tertiary,#1c1c21)] border-amber-500/50 shadow-2xl scale-[1.02]'
+                    : 'bg-[var(--bg-secondary,#121215)] border-[var(--border,rgba(255,255,255,0.08))] hover:border-amber-500/30'
                 }`}
               >
                 <div className="space-y-4">
@@ -107,24 +107,24 @@ const AIAgents = () => {
                     >
                       <agent.icon className="w-6 h-6" />
                     </div>
-                    <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-400">
+                    <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500">
                       {agent.role}
                     </span>
                   </div>
 
                   <div>
-                    <h3 className="text-base font-bold text-white group-hover:text-amber-400 transition-colors">
+                    <h3 className="text-base font-bold text-[var(--text-primary,#ffffff)] group-hover:text-amber-500 transition-colors">
                       {agent.name}
                     </h3>
-                    <p className="text-xs text-zinc-400 mt-2 leading-relaxed font-normal">
+                    <p className="text-xs text-[var(--text-secondary,#a1a1aa)] mt-2 leading-relaxed font-normal">
                       {agent.description}
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between text-[11px] text-zinc-500">
+                <div className="mt-6 pt-4 border-t border-[var(--border,rgba(255,255,255,0.08))] flex items-center justify-between text-[11px] text-[var(--text-muted,#71717a)]">
                   <span className="truncate pr-2">{agent.capability}</span>
-                  <ArrowRight className="w-3.5 h-3.5 text-zinc-600 group-hover:text-amber-400 group-hover:translate-x-1 transition-all shrink-0" />
+                  <ArrowRight className="w-3.5 h-3.5 text-zinc-400 group-hover:text-amber-500 group-hover:translate-x-1 transition-all shrink-0" />
                 </div>
               </div>
             );

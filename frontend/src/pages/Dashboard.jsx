@@ -5,16 +5,12 @@ import {
   BookOpen,
   Flame,
   Clock,
-  TrendingUp,
   ChevronRight,
-  Star,
   User,
   Settings,
   Plus,
-  Play,
   Sparkles,
-  Trophy,
-  Award
+  Trophy
 } from 'lucide-react';
 import Navbar from '../components/Dashboard/Navbar';
 import RecentCourseCard from '../components/Dashboard/RecentCourseCard';
@@ -22,16 +18,16 @@ import CreateCourseModal from '../components/Courses/CreateCourseModal';
 import api from '../api/axios';
 
 const StatCard = ({ label, value, icon: Icon, accent, subtitle }) => (
-  <div className="relative overflow-hidden rounded-3xl bg-zinc-950/90 border border-zinc-900 p-6 shadow-xl hover:border-zinc-800 transition-all duration-300">
+  <div className="relative overflow-hidden rounded-3xl bg-[var(--bg-secondary,#121215)] border border-[var(--border,rgba(255,255,255,0.08))] p-6 shadow-xl hover:border-amber-500/30 transition-all duration-300">
     <div className={`absolute top-0 right-0 w-28 h-28 rounded-full blur-3xl opacity-15 ${accent}`} />
     <div className="flex items-start justify-between">
       <div className="space-y-1">
-        <p className="text-xs text-zinc-500 uppercase tracking-widest font-semibold">{label}</p>
-        <p className="text-3xl font-extrabold text-white tracking-tight">{value ?? 0}</p>
-        {subtitle && <p className="text-[11px] text-zinc-500">{subtitle}</p>}
+        <p className="text-xs text-[var(--text-muted,#71717a)] uppercase tracking-widest font-semibold">{label}</p>
+        <p className="text-3xl font-extrabold text-[var(--text-primary,#ffffff)] tracking-tight">{value ?? 0}</p>
+        {subtitle && <p className="text-[11px] text-[var(--text-muted,#71717a)]">{subtitle}</p>}
       </div>
-      <div className={`p-3 rounded-2xl bg-white/5 border border-white/10 shrink-0`}>
-        <Icon className={`w-5 h-5 ${accent.replace('bg-', 'text-')}`} />
+      <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 shrink-0">
+        <Icon className="w-5 h-5 text-amber-500" />
       </div>
     </div>
   </div>
@@ -78,9 +74,6 @@ const Dashboard = () => {
     return acc + getSections(c).filter((s) => s.completed).length;
   }, 0);
 
-  // Resume most recently updated course
-  const lastActiveCourse = courses.find((c) => c.status === 'completed') || courses[0];
-
   const stats = [
     {
       label: 'Enrolled Courses',
@@ -93,21 +86,21 @@ const Dashboard = () => {
       label: 'Completed Courses',
       value: completedCourses,
       icon: Trophy,
-      accent: 'bg-green-500',
+      accent: 'bg-amber-500',
       subtitle: `${totalCompletedSections} total lessons done`,
     },
     {
       label: 'In Progress',
       value: inProgressCourses || (totalCourses > 0 ? totalCourses - completedCourses : 0),
       icon: Clock,
-      accent: 'bg-blue-500',
+      accent: 'bg-amber-500',
       subtitle: 'Active learning tracks',
     },
     {
       label: 'Learning Streak',
       value: '3 Days',
       icon: Flame,
-      accent: 'bg-rose-500',
+      accent: 'bg-amber-500',
       subtitle: 'Keep up the momentum!',
     },
   ];
@@ -116,18 +109,18 @@ const Dashboard = () => {
     <Navbar>
       <div className="space-y-8 max-w-7xl mx-auto">
         {/* Welcome Hero Banner */}
-        <div className="p-6 sm:p-8 rounded-3xl bg-zinc-950 border border-zinc-900 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-amber-500/5 blur-3xl pointer-events-none" />
+        <div className="p-6 sm:p-8 rounded-3xl bg-[var(--bg-secondary,#121215)] border border-[var(--border,rgba(255,255,255,0.08))] shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
 
           <div className="space-y-2 relative z-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-[11px] font-bold text-amber-400 uppercase tracking-widest">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-[11px] font-bold text-amber-500 uppercase tracking-widest">
               <Sparkles className="w-3.5 h-3.5" />
               Welcome Back
             </div>
-            <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
+            <h1 className="text-2xl sm:text-4xl font-extrabold text-[var(--text-primary,#ffffff)] tracking-tight">
               Hello, <span className="text-amber-500">{user?.name?.split(' ')[0] || 'Learner'}</span> 👋
             </h1>
-            <p className="text-sm text-zinc-400 max-w-xl">
+            <p className="text-sm text-[var(--text-secondary,#a1a1aa)] max-w-xl">
               Turn curiosity into mastery. Continue your AI-structured courses or create a new interactive module in seconds.
             </p>
           </div>
@@ -153,11 +146,11 @@ const Dashboard = () => {
         {/* Learning Hub Grid */}
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Continue Learning (8 Cols) */}
-          <div className="lg:col-span-8 rounded-3xl bg-zinc-950 border border-zinc-900 p-6 sm:p-8 space-y-6 shadow-xl">
+          <div className="lg:col-span-8 rounded-3xl bg-[var(--bg-secondary,#121215)] border border-[var(--border,rgba(255,255,255,0.08))] p-6 sm:p-8 space-y-6 shadow-xl">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-white">Recent Courses</h2>
-                <p className="text-xs text-zinc-500">Pick up where you left off</p>
+                <h2 className="text-lg font-bold text-[var(--text-primary,#ffffff)]">Recent Courses</h2>
+                <p className="text-xs text-[var(--text-muted,#71717a)]">Pick up where you left off</p>
               </div>
               <button
                 onClick={() => navigate('/courses')}
@@ -169,7 +162,7 @@ const Dashboard = () => {
             </div>
 
             {loading ? (
-              <div className="py-16 text-center text-zinc-500">
+              <div className="py-16 text-center text-[var(--text-muted,#71717a)]">
                 <div className="animate-spin w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full mx-auto mb-2" />
                 <p className="text-xs">Loading courses...</p>
               </div>
@@ -180,11 +173,11 @@ const Dashboard = () => {
                 ))}
               </div>
             ) : (
-              <div className="p-12 text-center rounded-2xl border border-dashed border-zinc-800 space-y-4">
-                <BookOpen className="w-10 h-10 text-zinc-700 mx-auto" />
+              <div className="p-12 text-center rounded-2xl border border-dashed border-[var(--border)] space-y-4">
+                <BookOpen className="w-10 h-10 text-[var(--text-muted)] mx-auto" />
                 <div>
-                  <p className="text-sm font-bold text-zinc-300">No courses started yet</p>
-                  <p className="text-xs text-zinc-500 mt-1">Paste any YouTube video to generate your first interactive course.</p>
+                  <p className="text-sm font-bold text-[var(--text-primary)]">No courses started yet</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Paste any YouTube video to generate your first interactive course.</p>
                 </div>
                 <button
                   onClick={() => setIsCreateModalOpen(true)}
@@ -199,8 +192,8 @@ const Dashboard = () => {
           {/* Quick Actions & Spotlight (4 Cols) */}
           <div className="lg:col-span-4 space-y-6">
             {/* Quick Actions */}
-            <div className="rounded-3xl bg-zinc-950 border border-zinc-900 p-6 space-y-4 shadow-xl">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-400">Quick Shortcuts</h2>
+            <div className="rounded-3xl bg-[var(--bg-secondary,#121215)] border border-[var(--border,rgba(255,255,255,0.08))] p-6 space-y-4 shadow-xl">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--text-muted,#71717a)]">Quick Shortcuts</h2>
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { label: 'Browse Courses', icon: BookOpen, href: '/courses' },
@@ -211,12 +204,12 @@ const Dashboard = () => {
                   <button
                     key={idx}
                     onClick={a.action ? a.action : () => navigate(a.href)}
-                    className="flex flex-col items-center justify-center gap-2.5 p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800/80 hover:border-amber-500/40 hover:bg-zinc-800/60 transition-all text-center group cursor-pointer"
+                    className="flex flex-col items-center justify-center gap-2.5 p-4 rounded-2xl bg-[var(--bg-tertiary,#1c1c21)] border border-[var(--border,rgba(255,255,255,0.08))] hover:border-amber-500/40 hover:bg-[var(--bg-primary)] transition-all text-center group cursor-pointer"
                   >
-                    <div className="w-10 h-10 rounded-xl bg-zinc-900 group-hover:bg-amber-500/10 flex items-center justify-center transition-colors">
-                      <a.icon className="w-5 h-5 text-zinc-400 group-hover:text-amber-400 transition-colors" />
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center transition-colors">
+                      <a.icon className="w-5 h-5 text-[var(--text-muted,#71717a)] group-hover:text-amber-500 transition-colors" />
                     </div>
-                    <span className="text-xs font-semibold text-zinc-300 group-hover:text-white transition-colors leading-tight">
+                    <span className="text-xs font-semibold text-[var(--text-secondary,#a1a1aa)] group-hover:text-[var(--text-primary,#ffffff)] transition-colors leading-tight">
                       {a.label}
                     </span>
                   </button>
@@ -225,13 +218,13 @@ const Dashboard = () => {
             </div>
 
             {/* AI Agent Features Highlight */}
-            <div className="p-6 rounded-3xl bg-gradient-to-br from-zinc-950 to-zinc-900 border border-zinc-900 space-y-3 shadow-xl">
-              <div className="flex items-center gap-2 text-amber-400 text-xs font-bold">
+            <div className="p-6 rounded-3xl bg-[var(--bg-secondary,#121215)] border border-[var(--border,rgba(255,255,255,0.08))] space-y-3 shadow-xl">
+              <div className="flex items-center gap-2 text-amber-500 text-xs font-bold">
                 <Sparkles className="w-4 h-4" />
                 <span>Multi-Agent System</span>
               </div>
-              <h3 className="text-sm font-bold text-white">Interactive RAG AI Tutor</h3>
-              <p className="text-xs text-zinc-400 leading-relaxed">
+              <h3 className="text-sm font-bold text-[var(--text-primary,#ffffff)]">Interactive RAG AI Tutor</h3>
+              <p className="text-xs text-[var(--text-secondary,#a1a1aa)] leading-relaxed">
                 Every course is indexed with semantic embeddings. Open any course and ask your personal tutor questions anytime!
               </p>
             </div>
