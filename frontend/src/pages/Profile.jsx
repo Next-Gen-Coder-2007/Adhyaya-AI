@@ -1,26 +1,34 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
-  User, Mail, Calendar, BookOpen, Flame, Clock, TrendingUp,
-  Edit2, Check, X, Lock
+  User,
+  Mail,
+  BookOpen,
+  Flame,
+  Clock,
+  TrendingUp,
+  Edit2,
+  Check,
+  X,
+  Lock,
+  Trophy,
+  Award,
+  Sparkles,
+  Zap
 } from 'lucide-react';
 import Navbar from '../components/Dashboard/Navbar';
 import { Avatar } from '../components/Dashboard/Avatar';
 import api from '../api/axios';
 
 const StatCard = ({ label, value, icon: Icon, accent }) => (
-  <div className="relative overflow-hidden rounded-2xl bg-zinc-950 border border-zinc-900 p-6">
-    <div className={`absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl opacity-10 ${accent}`} />
+  <div className="relative overflow-hidden rounded-3xl bg-zinc-950 border border-zinc-900 p-6 shadow-lg">
+    <div className={`absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl opacity-15 ${accent}`} />
     <div className="flex items-start justify-between">
       <div>
-        <p className="text-xs text-zinc-600 uppercase tracking-widest mb-2">{label}</p>
-        {value != null ? (
-          <p className="text-3xl font-bold text-white">{value}</p>
-        ) : (
-          <p className="text-sm text-zinc-700 mt-1">No data yet</p>
-        )}
+        <p className="text-xs text-zinc-500 uppercase tracking-widest font-semibold mb-1">{label}</p>
+        <p className="text-2xl font-extrabold text-white">{value ?? 0}</p>
       </div>
-      <div className={`p-2.5 rounded-xl bg-white/5`}>
+      <div className="p-3 rounded-xl bg-white/5 border border-white/10 shrink-0">
         <Icon className={`w-5 h-5 ${accent.replace('bg-', 'text-')}`} />
       </div>
     </div>
@@ -33,15 +41,15 @@ const EditableField = ({
   onSave,
   icon: Icon,
   isEditable = true,
-  type = "text",
-  placeholder = ""
+  type = 'text',
+  placeholder = '',
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSave = async () => {
-    if (editValue.trim() === "") {
+    if (editValue.trim() === '') {
       setEditValue(value);
       setIsEditing(false);
       return;
@@ -51,19 +59,19 @@ const EditableField = ({
       await onSave(editValue);
       setIsEditing(false);
     } catch (error) {
-      console.error("Failed to update:", error);
+      console.error('Failed to update:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex items-start gap-4 p-4 rounded-xl bg-zinc-950 border border-zinc-900">
-      <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
-        <Icon className="w-5 h-5 text-amber-500" />
+    <div className="flex items-start gap-4 p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800/80">
+      <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+        <Icon className="w-5 h-5 text-amber-500" style={{ color: 'var(--color-accent)' }} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-xs text-zinc-600 uppercase tracking-widest mb-1">{label}</p>
+        <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold mb-1">{label}</p>
         {isEditing ? (
           <div className="flex gap-2">
             <input
@@ -71,14 +79,14 @@ const EditableField = ({
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
               placeholder={placeholder}
-              className="flex-1 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500 focus:outline-none text-sm text-white"
+              className="flex-1 px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-700 text-xs text-white outline-none focus:border-amber-500"
             />
             <button
               onClick={handleSave}
               disabled={isLoading}
-              className="p-1.5 rounded-lg hover:bg-white/5 text-green-500 transition-colors disabled:opacity-50"
+              className="p-2 rounded-xl bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors cursor-pointer"
             >
-              <Check className="w-4 h-4" />
+              <Check className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => {
@@ -86,22 +94,22 @@ const EditableField = ({
                 setIsEditing(false);
               }}
               disabled={isLoading}
-              className="p-1.5 rounded-lg hover:bg-white/5 text-red-500 transition-colors disabled:opacity-50"
+              className="p-2 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors cursor-pointer"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
         ) : (
           <div className="flex items-center justify-between">
-            <p className="text-base text-white">
-              {label === 'Password' ? '••••••••' : value || placeholder}
+            <p className="text-sm font-semibold text-white truncate">
+              {label === 'Password' ? '••••••••••••' : value || placeholder}
             </p>
             {isEditable && (
               <button
                 onClick={() => setIsEditing(true)}
-                className="p-1.5 rounded-lg hover:bg-white/5 text-zinc-500 transition-colors"
+                className="p-1.5 rounded-lg text-zinc-500 hover:text-white transition-colors cursor-pointer"
               >
-                <Edit2 className="w-4 h-4" />
+                <Edit2 className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
@@ -118,13 +126,12 @@ const Profile = () => {
     email: user?.email || '',
   });
   const [courses, setCourses] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const fetchCourses = async () => {
       try {
         const response = await api.get('/courses', { withCredentials: true });
-        setCourses(response.data);
+        setCourses(response.data || []);
       } catch (err) {
         console.error(err);
       }
@@ -132,74 +139,115 @@ const Profile = () => {
     fetchCourses();
   }, []);
 
-  const getSections = (course) => course.modules?.flatMap(m => m.sections) || [];
+  const getSections = (course) => course.modules?.flatMap((m) => m.sections || []) || [];
   const totalCourses = courses.length;
-  const completedCourses = courses.filter(course =>
-    course.status === "completed" && getSections(course).every(s => s.completed)
-  ).length;
-  const pendingCourses = courses.filter(course => course.status !== "completed").length;
-  const incompleteCourses = courses.filter(course =>
-    getSections(course).some(s => !s.completed)
-  ).length;
+  const completedCourses = courses.filter((course) => {
+    const secs = getSections(course);
+    return course.status === 'completed' && secs.length > 0 && secs.every((s) => s.completed);
+  }).length;
+  const pendingCourses = courses.filter((course) => course.status !== 'completed').length;
+  const inProgressCourses = courses.filter((course) => {
+    const secs = getSections(course);
+    return secs.some((s) => s.completed) && !secs.every((s) => s.completed);
+  }).length;
 
   const handleSave = async (field, value) => {
     try {
       const updateData = { [field]: value };
-      const response = await api.put('/auth/me', updateData, { withCredentials: true });
-      window.location.reload()
+      await api.put('/auth/me', updateData, { withCredentials: true });
+      setUserData((prev) => ({ ...prev, [field]: value }));
     } catch (error) {
-      throw error;
+      console.error('Failed to update profile field:', error);
     }
   };
 
   const isGoogleUser = user?.provider === 'google';
 
   const statCards = [
-    { label: 'Enrolled Courses', value: totalCourses, icon: BookOpen, accent: 'bg-amber-500' },
-    { label: 'Completed', value: completedCourses, icon: Flame, accent: 'bg-green-500' },
-    { label: 'In Progress', value: incompleteCourses, icon: Clock, accent: 'bg-blue-500' },
-    { label: 'Generating', value: pendingCourses, icon: TrendingUp, accent: 'bg-violet-500' },
+    { label: 'Total Enrolled', value: totalCourses, icon: BookOpen, accent: 'bg-amber-500' },
+    { label: 'Completed', value: completedCourses, icon: Trophy, accent: 'bg-green-500' },
+    { label: 'In Progress', value: inProgressCourses, icon: Clock, accent: 'bg-blue-500' },
+    { label: 'Generating', value: pendingCourses, icon: TrendingUp, accent: 'bg-purple-500' },
+  ];
+
+  const badges = [
+    {
+      title: 'Pioneer Learner',
+      desc: 'Created first AI curriculum',
+      unlocked: totalCourses > 0,
+      icon: Sparkles,
+    },
+    {
+      title: 'Knowledge Finisher',
+      desc: 'Completed an entire course',
+      unlocked: completedCourses > 0,
+      icon: Trophy,
+    },
+    {
+      title: 'Fast Learner',
+      desc: 'Completed 5+ learning sections',
+      unlocked: courses.flatMap((c) => getSections(c)).filter((s) => s.completed).length >= 5,
+      icon: Zap,
+    },
+    {
+      title: 'Honor Scholar',
+      desc: 'Scored 100% on a module quiz',
+      unlocked: courses.flatMap((c) => getSections(c)).some((s) => s.quiz_score === 100),
+      icon: Award,
+    },
   ];
 
   return (
     <Navbar>
-      <div className="space-y-8">
+      <div className="space-y-8 max-w-5xl mx-auto">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Your Profile</h1>
-          <p className="mt-2 text-sm text-zinc-600">Manage your personal information and track your progress.</p>
+          <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
+            Account Profile
+          </h1>
+          <p className="mt-1 text-xs sm:text-sm text-zinc-400">
+            Manage your credentials, study achievements, and learning milestones.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1 rounded-2xl bg-zinc-950 border border-zinc-900 p-6">
-            <div className="flex flex-col items-center gap-4">
-              <Avatar name={userData.name} size={10} />
-              <div className="text-center">
-                <h2 className="text-xl font-semibold text-white">{userData.name}</h2>
-                <p className="text-sm text-zinc-600">{userData.email}</p>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          {/* Profile Card (1 Col) */}
+          <div className="lg:col-span-1 rounded-3xl bg-zinc-950 border border-zinc-900 p-6 space-y-6 shadow-xl">
+            <div className="flex flex-col items-center gap-3 text-center">
+              <div className="relative">
+                <Avatar name={userData.name || 'User'} size={12} />
+                <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-zinc-950" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-white">{userData.name || 'Student'}</h2>
+                <p className="text-xs text-zinc-500 truncate max-w-[200px]">{userData.email}</p>
+                <span className="inline-block mt-2 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-[10px] font-bold text-amber-400 uppercase tracking-widest">
+                  {user?.provider === 'google' ? 'Google Account' : 'Standard Member'}
+                </span>
               </div>
             </div>
-            <div className="mt-6 space-y-2">
+
+            <div className="space-y-3 pt-2 border-t border-zinc-900">
               <EditableField
-                label="Name"
+                label="Full Name"
                 value={userData.name}
-                onSave={(value) => handleSave('name', value)}
+                onSave={(val) => handleSave('name', val)}
                 icon={User}
                 isEditable={true}
-                placeholder="Enter your name"
+                placeholder="Your name"
               />
               <EditableField
-                label="Email"
+                label="Email Address"
                 value={userData.email}
-                onSave={(value) => handleSave('email', value)}
+                onSave={(val) => handleSave('email', val)}
                 icon={Mail}
                 isEditable={!isGoogleUser}
-                placeholder="Enter your email"
+                placeholder="Your email"
               />
-              {user?.provider === 'local' && (
+              {!isGoogleUser && (
                 <EditableField
                   label="Password"
                   value=""
-                  onSave={(value) => handleSave('password', value)}
+                  onSave={(val) => handleSave('password', val)}
                   icon={Lock}
                   isEditable={true}
                   type="password"
@@ -209,12 +257,53 @@ const Profile = () => {
             </div>
           </div>
 
-          <div className="lg:col-span-2 rounded-2xl bg-zinc-950 border border-zinc-900 p-6">
-            <h2 className="text-lg font-semibold text-zinc-300 mb-6">Your Stats</h2>
-            <div className="grid grid-cols-2 gap-4">
-              {statCards.map((stat) => (
-                <StatCard key={stat.label} {...stat} />
-              ))}
+          {/* Stats and Achievements (2 Cols) */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Stats */}
+            <div className="rounded-3xl bg-zinc-950 border border-zinc-900 p-6 sm:p-8 space-y-4 shadow-xl">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-400">
+                Learning Performance
+              </h2>
+              <div className="grid grid-cols-2 gap-4">
+                {statCards.map((stat) => (
+                  <StatCard key={stat.label} {...stat} />
+                ))}
+              </div>
+            </div>
+
+            {/* Badges / Achievements Gallery */}
+            <div className="rounded-3xl bg-zinc-950 border border-zinc-900 p-6 sm:p-8 space-y-4 shadow-xl">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-400">
+                Unlocked Honors & Badges
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {badges.map((b, idx) => (
+                  <div
+                    key={idx}
+                    className={`p-4 rounded-2xl border flex items-center gap-3.5 transition-all ${
+                      b.unlocked
+                        ? 'bg-zinc-900/80 border-amber-500/30 text-zinc-200'
+                        : 'bg-zinc-950/40 border-zinc-900 text-zinc-600 opacity-60'
+                    }`}
+                  >
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                        b.unlocked
+                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                          : 'bg-zinc-900 text-zinc-700'
+                      }`}
+                    >
+                      <b.icon className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className={`text-xs font-bold ${b.unlocked ? 'text-white' : 'text-zinc-500'}`}>
+                        {b.title}
+                      </p>
+                      <p className="text-[10px] text-zinc-500 leading-tight mt-0.5">{b.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>

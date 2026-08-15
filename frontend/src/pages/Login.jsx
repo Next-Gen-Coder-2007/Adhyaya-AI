@@ -1,15 +1,15 @@
-import { use, useState } from 'react';
-import { Eye, EyeOff, Mail, Lock, AlertCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Eye, EyeOff, Mail, Lock, AlertCircle, Sparkles } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
 import logo from '../assets/logo.png';
-import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const { loginAuth } = useAuth();
   const navigate = useNavigate();
 
@@ -21,11 +21,14 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
     try {
-      const res = await loginAuth('/auth/login', formData);
-      navigate('/dashboard')
+      await loginAuth('/auth/login', formData);
+      navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.error || 'Something went wrong. Please try again.');
+      setError(err.response?.data?.error || 'Invalid credentials. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -33,104 +36,114 @@ const Login = () => {
     onSuccess: async (tokenResponse) => {
       setError('');
       try {
-        const res = await loginAuth("/auth/google", {
+        await loginAuth('/auth/google', {
           access_token: tokenResponse.access_token,
         });
-        navigate('/dashboard')
+        navigate('/dashboard');
       } catch (err) {
         setError(err.response?.data?.error || 'Google login failed. Please try again.');
       }
     },
-
     onError: () => {
       setError('Google login failed. Please try again.');
     },
   });
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-10">
-          <div className="w-16 h-16 flex items-center justify-center mx-auto mb-4">
-            <img src={logo} alt="logo" />
-          </div>
-          <h1 className="text-3xl font-bold text-white">Adhyaya AI</h1>
-          <p className="text-gray-400 mt-2">Sign in to continue your learning journey</p>
+    <div className="min-h-screen bg-[var(--bg-primary,#09090b)] flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background ambient glow */}
+      <div className="absolute top-1/4 -left-20 w-96 h-96 rounded-full bg-amber-500/10 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-1/4 -right-20 w-96 h-96 rounded-full bg-purple-500/10 blur-[120px] pointer-events-none" />
+
+      <div className="w-full max-w-md relative z-10">
+        {/* Logo and Brand */}
+        <div className="text-center mb-8">
+          <Link to="/" className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-zinc-900 border border-zinc-800 p-2.5 mx-auto mb-4 shadow-xl hover:scale-105 transition-transform">
+            <img src={logo} alt="Adhyaya AI Logo" className="w-full h-full object-contain" />
+          </Link>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            Welcome to <span style={{ color: 'var(--color-accent, #f59e0b)' }}>Adhyaya AI</span>
+          </h1>
+          <p className="text-xs sm:text-sm text-zinc-400 mt-1.5">
+            Sign in to continue your interactive AI study studio
+          </p>
         </div>
 
-        {error && (
-          <div className="mb-6 flex items-start gap-3 bg-red-950/60 border border-red-600/50 rounded-xl px-4 py-3">
-            <AlertCircle className="h-5 w-5 text-red-400 mt-0.5 shrink-0" />
-            <p className="text-red-400 text-sm">{error}</p>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Mail className="h-5 w-5 text-yellow-400" />
+        {/* Card Box */}
+        <div className="p-6 sm:p-8 rounded-3xl bg-zinc-950/85 border border-zinc-900 shadow-2xl backdrop-blur-xl space-y-6">
+          {error && (
+            <div className="flex items-start gap-3 bg-red-950/50 border border-red-800/60 rounded-2xl p-3.5 text-xs text-red-400">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{error}</span>
             </div>
-            <input
-              type="email"
-              name="email"
-              placeholder="Email address"
-              value={formData.email}
-              onChange={handleChange}
-              className="w-full pl-10 pr-4 py-3 bg-gray-900/50 border border-yellow-800/30 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-              required
-            />
-          </div>
+          )}
 
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Lock className="h-5 w-5 text-yellow-400" />
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-zinc-300">Email address</label>
+              <div className="relative">
+                <Mail className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="name@example.com"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="w-full pl-10 pr-4 py-2.5 bg-zinc-900/70 border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                  required
+                />
+              </div>
             </div>
-            <input
-              type={showPassword ? "text" : "password"}
-              name="password"
-              placeholder="Password"
-              value={formData.password}
-              onChange={handleChange}
-              className="w-full pl-10 pr-10 py-3 bg-gray-900/50 border border-yellow-800/30 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-              required
-            />
+
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center">
+                <label className="text-xs font-medium text-zinc-300">Password</label>
+                <Link to="/forgot-password" className="text-[11px] text-amber-400 hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  placeholder="••••••••••••"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="w-full pl-10 pr-10 py-2.5 bg-zinc-900/70 border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 cursor-pointer"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
             <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-extrabold text-xs uppercase tracking-wider hover:opacity-90 transition-all shadow-xl shadow-amber-500/15 cursor-pointer disabled:opacity-50"
             >
-              {showPassword ? (
-                <EyeOff className="h-5 w-5 text-yellow-400" />
-              ) : (
-                <Eye className="h-5 w-5 text-yellow-400" />
-              )}
+              {loading ? 'Signing in...' : 'Sign In'}
             </button>
+          </form>
+
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-zinc-800" />
+            <span className="text-[11px] text-zinc-500 uppercase font-semibold">or</span>
+            <div className="flex-1 h-px bg-zinc-800" />
           </div>
 
-          <div className="flex justify-end">
-            <Link to="/forgot-password" className="text-sm text-yellow-400 hover:text-yellow-300">
-              Forgot password?
-            </Link>
-          </div>
-
-          <button
-            type="submit"
-            className="w-full py-3 px-4 bg-gradient-to-r from-yellow-500 to-yellow-700 text-black font-semibold rounded-xl hover:opacity-90 transition-opacity shadow-lg cursor-pointer"
-          >
-            Sign In
-          </button>
-        </form>
-
-        <div className="my-6 flex items-center before:content-[''] before:flex-1 before:border-t before:border-gray-700 after:content-[''] after:flex-1 after:border-t after:border-gray-700">
-          <p className="text-gray-500 px-4 text-sm">or</p>
-        </div>
-
-        <div className="space-y-4">
           <button
             onClick={() => login()}
-            className="w-full py-3 px-4 bg-gray-900/50 border border-yellow-800/30 rounded-xl text-white font-medium hover:bg-gray-800/50 transition-colors flex items-center justify-center space-x-2 cursor-pointer"
+            type="button"
+            className="w-full py-2.5 px-4 bg-zinc-900/70 border border-zinc-800 rounded-xl text-xs font-semibold text-zinc-200 hover:text-white hover:bg-zinc-800/80 transition-colors flex items-center justify-center gap-3 cursor-pointer"
           >
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
@@ -140,10 +153,10 @@ const Login = () => {
           </button>
         </div>
 
-        <p className="text-center text-gray-400 mt-8">
+        <p className="text-center text-xs text-zinc-500 mt-6">
           Don't have an account?{' '}
-          <Link to="/register" className="text-yellow-400 hover:text-yellow-300 font-medium">
-            Sign up
+          <Link to="/register" className="text-amber-400 hover:text-amber-300 font-bold ml-1">
+            Sign up for free
           </Link>
         </p>
       </div>
