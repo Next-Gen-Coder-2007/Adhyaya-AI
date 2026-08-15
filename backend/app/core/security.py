@@ -15,6 +15,8 @@ def verify_password(p, h): return pwd_context.verify(p, h)
 
 def create_token(data: dict):
     payload = data.copy()
-    payload["exp"] = datetime.utcnow() + timedelta(hours=1)
+    payload["exp"] = datetime.utcnow() + timedelta(days=7)
 
-    return jwt.encode(payload, os.getenv("SECRET_KEY"), algorithm=os.getenv("ALGORITHM"))
+    secret = os.getenv("SECRET_KEY", "adhyaya_ai_super_secret_jwt_key_2026")
+    algorithm = os.getenv("ALGORITHM", "HS256")
+    return jwt.encode(payload, secret, algorithm=algorithm)
