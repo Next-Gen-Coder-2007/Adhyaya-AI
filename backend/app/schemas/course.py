@@ -1,14 +1,15 @@
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List
 from app.schemas.module import ModuleResponse
 
 
 class CourseCreate(BaseModel):
-    title: str
-    description: str
-    image_url: str
-    video_url: str
+    title: Optional[str] = "New AI Course"
+    description: Optional[str] = "Comprehensive AI-generated learning pathway."
+    image_url: Optional[str] = None
+    video_url: Optional[str] = None
+    youtube_url: Optional[str] = None
     is_playlist: bool = False
     status: str = "generating"
 
@@ -23,7 +24,7 @@ class CourseResponse(BaseModel):
     description: str
     image_url: Optional[str] = None
     video_url: Optional[str] = None
-    status: str
+    status: str = "completed"
     error_message: Optional[str] = None
     is_playlist: bool = False
     notes: Optional[str] = None

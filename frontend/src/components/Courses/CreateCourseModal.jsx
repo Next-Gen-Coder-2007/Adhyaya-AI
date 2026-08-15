@@ -180,6 +180,7 @@ const CreateCourseModal = ({ isOpen, onClose, fetchCourses }) => {
         title: title || 'New AI Course',
         description: description || 'Comprehensive AI-generated learning pathway.',
         image_url: thumbnailUrl || `https://img.youtube.com/vi/default/hqdefault.jpg`,
+        video_url: ytLink,
         youtube_url: ytLink,
         is_playlist: isPlaylist,
         status: 'generating',

@@ -110,11 +110,18 @@ def create_course(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    target_url = data.video_url or data.youtube_url or ""
+    if not target_url:
+        raise HTTPException(
+            status_code=400,
+            detail="A valid YouTube video or playlist URL is required."
+        )
+
     course = Course(
         title=data.title or "Interactive Course Track",
         description=data.description or "AI synthesized interactive course modules.",
         image_url=data.image_url,
-        video_url=data.video_url,
+        video_url=target_url,
         is_playlist=data.is_playlist,
         status="generating",
         user_id=current_user.id,
@@ -126,7 +133,7 @@ def create_course(
     background_tasks.add_task(
         generate_course_modules_task,
         course.id,
-        data.video_url,
+        target_url,
         data.is_playlist,
     )
 
