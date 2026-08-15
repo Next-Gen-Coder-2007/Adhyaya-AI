@@ -1,7 +1,10 @@
 import os
 import re
+import logging
 from youtube_transcript_api import YouTubeTranscriptApi
 from googleapiclient.discovery import build
+
+logger = logging.getLogger(__name__)
 
 
 def is_valid_playlist_url(url: str) -> bool:
@@ -16,56 +19,97 @@ def extract_video_id(url: str) -> str | None:
     return match.group(1) if match else None
 
 
+def _format_snippet(item) -> dict:
+    text = getattr(item, "text", item.get("text", "") if isinstance(item, dict) else "")
+    start = getattr(item, "start", item.get("start", 0) if isinstance(item, dict) else 0)
+    duration = getattr(item, "duration", item.get("duration", 0) if isinstance(item, dict) else 0)
+    
+    start_f = float(start) if start is not None else 0.0
+    duration_f = float(duration) if duration is not None else 0.0
+    
+    return {
+        "text": str(text).strip(),
+        "start": round(start_f, 2),
+        "end": round(start_f + duration_f, 2)
+    }
+
+
 def get_transcript(url: str) -> list[dict]:
     video_id = extract_video_id(url)
     if not video_id:
         return []
 
-    # 1. Try standard get_transcript with priority language list
-    try:
-        raw_items = YouTubeTranscriptApi.get_transcript(
-            video_id,
-            languages=['en', 'en-US', 'en-GB', 'en-CA', 'en-IN', 'hi', 'es', 'fr', 'de']
-        )
-        return [
-            {
-                "text": item.get("text", "").strip(),
-                "start": round(float(item.get("start", 0)), 2),
-                "end": round(float(item.get("start", 0)) + float(item.get("duration", 0)), 2)
-            }
-            for item in raw_items
-            if item.get("text", "").strip()
-        ]
-    except Exception as e1:
-        print(f"[TRANSCRIPT] Standard fetch failed for {video_id}: {e1}. Trying transcript listing fallback...")
+    languages = ['en', 'en-US', 'en-GB', 'en-CA', 'en-IN', 'hi', 'es', 'fr', 'de']
 
-    # 2. Try listing all transcripts and finding any available (auto-generated or manual)
+    # Strategy 1: YouTubeTranscriptApi().fetch(...) [v1.0+ instance API]
     try:
-        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-        # Try to find English first, else first available
-        try:
-            transcript = transcript_list.find_transcript(['en', 'en-US', 'en-GB'])
-        except Exception:
-            # Pick first available generated or manual transcript and translate to English
+        api = YouTubeTranscriptApi()
+        if hasattr(api, "fetch"):
             try:
-                first_transcript = next(iter(transcript_list))
-                transcript = first_transcript.translate('en') if first_transcript.is_translatable else first_transcript
+                res = api.fetch(video_id, languages=languages)
             except Exception:
-                transcript = next(iter(transcript_list))
+                res = api.fetch(video_id)
+            
+            snippets = getattr(res, "snippets", res)
+            items = [_format_snippet(s) for s in snippets]
+            items = [i for i in items if i["text"]]
+            if items:
+                logger.info(f"[TRANSCRIPT] Extracted {len(items)} items using v1.0+ fetch API for {video_id}")
+                return items
+    except Exception as e:
+        logger.debug(f"[TRANSCRIPT] Strategy 1 failed for {video_id}: {e}")
 
-        raw_items = transcript.fetch()
-        return [
-            {
-                "text": item.get("text", "").strip(),
-                "start": round(float(item.get("start", 0)), 2),
-                "end": round(float(item.get("start", 0)) + float(item.get("duration", 0)), 2)
-            }
-            for item in raw_items
-            if item.get("text", "").strip()
-        ]
-    except Exception as e2:
-        print(f"[TRANSCRIPT ERROR] All transcript extraction methods failed for {video_id}: {e2}")
-        return []
+    # Strategy 2: YouTubeTranscriptApi.get_transcript(...) [Legacy static method]
+    try:
+        if hasattr(YouTubeTranscriptApi, "get_transcript"):
+            raw_items = YouTubeTranscriptApi.get_transcript(video_id, languages=languages)
+            items = [_format_snippet(s) for s in raw_items]
+            items = [i for i in items if i["text"]]
+            if items:
+                logger.info(f"[TRANSCRIPT] Extracted {len(items)} items using legacy static API for {video_id}")
+                return items
+    except Exception as e:
+        logger.debug(f"[TRANSCRIPT] Strategy 2 failed for {video_id}: {e}")
+
+    # Strategy 3: Transcript Listing with Translation fallback
+    try:
+        api = YouTubeTranscriptApi()
+        transcript_list = None
+        if hasattr(api, "list"):
+            transcript_list = api.list(video_id)
+        elif hasattr(YouTubeTranscriptApi, "list_transcripts"):
+            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+
+        if transcript_list:
+            transcript = None
+            try:
+                if hasattr(transcript_list, "find_transcript"):
+                    transcript = transcript_list.find_transcript(languages)
+            except Exception:
+                pass
+
+            if not transcript and hasattr(transcript_list, "__iter__"):
+                try:
+                    first = next(iter(transcript_list))
+                    if hasattr(first, "is_translatable") and first.is_translatable and hasattr(first, "translate"):
+                        transcript = first.translate('en')
+                    else:
+                        transcript = first
+                except Exception:
+                    pass
+
+            if transcript and hasattr(transcript, "fetch"):
+                raw_items = transcript.fetch()
+                snippets = getattr(raw_items, "snippets", raw_items)
+                items = [_format_snippet(s) for s in snippets]
+                items = [i for i in items if i["text"]]
+                if items:
+                    logger.info(f"[TRANSCRIPT] Extracted {len(items)} items using translation listing for {video_id}")
+                    return items
+    except Exception as e:
+        logger.error(f"[TRANSCRIPT ERROR] All transcript extraction strategies failed for {video_id}: {e}")
+
+    return []
 
 
 def get_playlist_videos(playlist_url: str) -> list[dict]:
@@ -78,7 +122,7 @@ def get_playlist_videos(playlist_url: str) -> list[dict]:
 
         api_key = os.getenv("YOUTUBE_API_KEY")
         if not api_key:
-            print("[PLAYLIST ERROR] YOUTUBE_API_KEY not set in environment.")
+            logger.warning("[PLAYLIST ERROR] YOUTUBE_API_KEY not set in environment.")
             return []
 
         youtube = build(
@@ -113,5 +157,5 @@ def get_playlist_videos(playlist_url: str) -> list[dict]:
         return videos
 
     except Exception as e:
-        print(f"Playlist Error: {e}")
-        return []
+        logger.error(f"Playlist Error: {e}")
+        return []
