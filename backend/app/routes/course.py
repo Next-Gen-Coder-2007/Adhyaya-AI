@@ -6,9 +6,7 @@ import hashlib
 from datetime import datetime
 
 from app.core.database import get_db, SessionLocal
-from app.models.course import Course
-from app.models.module import Module
-from app.models.section import Section
+from app.models import Course, Module, Section, User
 from app.schemas.course import CourseCreate, CourseResponse, CourseNotesUpdate
 from app.schemas.section import QuizSubmitRequest
 from app.schemas.chat import ChatRequest, ChatResponse
@@ -16,7 +14,6 @@ from app.middleware.auth import get_current_user
 from app.ai.agents.curriculum_agent import generate_course_data
 from app.ai.agents.embedding_agent import embed_course, delete_course_embeddings
 from app.ai.agents.chat_agent import chat as rag_chat
-from app.models.user import User
 
 router = APIRouter(prefix="/courses", tags=["Courses"])
 

@@ -7,8 +7,7 @@ from sqlalchemy import text
 
 from app.core.config import settings
 from app.core.database import Base, engine, get_db
-from app.models.course import Course, Module, Section
-from app.models.user import User
+from app.models import Course, Module, Section, User
 from app.routes.auth import router as auth_router
 from app.routes.course import router as course_router
 
