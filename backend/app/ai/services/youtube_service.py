@@ -17,22 +17,54 @@ def extract_video_id(url: str) -> str | None:
 
 
 def get_transcript(url: str) -> list[dict]:
+    video_id = extract_video_id(url)
+    if not video_id:
+        return []
+
+    # 1. Try standard get_transcript with priority language list
     try:
-        video_id = extract_video_id(url)
-        if not video_id:
-            return []
+        raw_items = YouTubeTranscriptApi.get_transcript(
+            video_id,
+            languages=['en', 'en-US', 'en-GB', 'en-CA', 'en-IN', 'hi', 'es', 'fr', 'de']
+        )
+        return [
+            {
+                "text": item.get("text", "").strip(),
+                "start": round(float(item.get("start", 0)), 2),
+                "end": round(float(item.get("start", 0)) + float(item.get("duration", 0)), 2)
+            }
+            for item in raw_items
+            if item.get("text", "").strip()
+        ]
+    except Exception as e1:
+        print(f"[TRANSCRIPT] Standard fetch failed for {video_id}: {e1}. Trying transcript listing fallback...")
 
-        api = YouTubeTranscriptApi()
-        snippets = api.fetch(video_id).snippets
+    # 2. Try listing all transcripts and finding any available (auto-generated or manual)
+    try:
+        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+        # Try to find English first, else first available
+        try:
+            transcript = transcript_list.find_transcript(['en', 'en-US', 'en-GB'])
+        except Exception:
+            # Pick first available generated or manual transcript and translate to English
+            try:
+                first_transcript = next(iter(transcript_list))
+                transcript = first_transcript.translate('en') if first_transcript.is_translatable else first_transcript
+            except Exception:
+                transcript = next(iter(transcript_list))
 
-        return [{
-            "text": s.text,
-            "start": s.start,
-            "end": s.start + s.duration
-        } for s in snippets]
-
-    except Exception as e:
-        print(f"Transcript Error: {e}")
+        raw_items = transcript.fetch()
+        return [
+            {
+                "text": item.get("text", "").strip(),
+                "start": round(float(item.get("start", 0)), 2),
+                "end": round(float(item.get("start", 0)) + float(item.get("duration", 0)), 2)
+            }
+            for item in raw_items
+            if item.get("text", "").strip()
+        ]
+    except Exception as e2:
+        print(f"[TRANSCRIPT ERROR] All transcript extraction methods failed for {video_id}: {e2}")
         return []
 
 
@@ -44,10 +76,15 @@ def get_playlist_videos(playlist_url: str) -> list[dict]:
 
         playlist_id = match.group(1)
 
+        api_key = os.getenv("YOUTUBE_API_KEY")
+        if not api_key:
+            print("[PLAYLIST ERROR] YOUTUBE_API_KEY not set in environment.")
+            return []
+
         youtube = build(
             "youtube",
             "v3",
-            developerKey=os.getenv("YOUTUBE_API_KEY")
+            developerKey=api_key
         )
 
         videos, page_token = [], None
@@ -65,7 +102,7 @@ def get_playlist_videos(playlist_url: str) -> list[dict]:
                 video_id = snippet.get("resourceId", {}).get("videoId")
                 if video_id:
                     videos.append({
-                        "title": snippet.get("title"),
+                        "title": snippet.get("title", "Untitled Video"),
                         "url": f"https://www.youtube.com/watch?v={video_id}"
                     })
 
@@ -77,4 +114,4 @@ def get_playlist_videos(playlist_url: str) -> list[dict]:
 
     except Exception as e:
         print(f"Playlist Error: {e}")
-        return []
+        return []
