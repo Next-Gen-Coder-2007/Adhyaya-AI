@@ -25,12 +25,15 @@ import {
   RotateCcw,
   Trophy,
   Award,
-  Maximize2
+  Maximize2,
+  Keyboard,
+  X
 } from 'lucide-react';
 import api from '../../api/axios';
 import Navbar from '../../components/Dashboard/Navbar';
 import ChatPanel from './ChatPanel';
 import CustomYouTubePlayer from './CustomYoutubePlayer';
+import CertificateModal from './CertificateModal';
 
 const formatTime = (seconds) => {
   if (seconds === null || seconds === undefined || isNaN(seconds)) return null;
@@ -132,6 +135,25 @@ const CourseDetail = () => {
   // Copy indicator
   const [copiedSummary, setCopiedSummary] = useState(false);
 
+  // Certificate & Shortcuts Modals
+  const [certData, setCertData] = useState(null);
+  const [isCertModalOpen, setIsCertModalOpen] = useState(false);
+  const [loadingCert, setLoadingCert] = useState(false);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+
+  const handleOpenCertificate = async () => {
+    try {
+      setLoadingCert(true);
+      const res = await api.get(`/courses/${id}/certificate`);
+      setCertData(res.data);
+      setIsCertModalOpen(true);
+    } catch (err) {
+      console.error('Failed to generate certificate:', err);
+    } finally {
+      setLoadingCert(false);
+    }
+  };
+
   const fetchCourse = async () => {
     try {
       setLoading(true);
@@ -171,6 +193,24 @@ const CourseDetail = () => {
     }
     return () => clearInterval(interval);
   }, [course?.status]);
+
+  // Keyboard shortcut listener
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+      if (e.key === '?') {
+        setIsShortcutsOpen((v) => !v);
+      }
+      if ((e.key === 'j' || e.key === 'J') && playerInstance) {
+        playerInstance.seekTo(Math.max(0, currentVideoTime - 10), true);
+      }
+      if ((e.key === 'l' || e.key === 'L') && playerInstance) {
+        playerInstance.seekTo(currentVideoTime + 10, true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [playerInstance, currentVideoTime]);
 
   // Handle section change and reset quiz state
   const handleSelectSection = (module, sIdx, section) => {
@@ -445,9 +485,9 @@ const CourseDetail = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-4 shrink-0">
+          <div className="flex items-center gap-3 shrink-0">
             {/* Progress Bar */}
-            <div className="w-48 hidden sm:block">
+            <div className="w-40 hidden sm:block">
               <div className="flex justify-between text-[11px] text-zinc-400 mb-1">
                 <span>Curriculum Progress</span>
                 <span className="font-bold text-amber-400">{progress}%</span>
@@ -459,6 +499,28 @@ const CourseDetail = () => {
                 />
               </div>
             </div>
+
+            {/* Certificate Trigger when 100% complete */}
+            {progress === 100 && (
+              <button
+                onClick={handleOpenCertificate}
+                disabled={loadingCert}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-extrabold text-xs shadow-lg shadow-amber-500/20 hover:opacity-90 transition-all cursor-pointer"
+                title="Claim Certificate of Completion"
+              >
+                {loadingCert ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Award className="w-3.5 h-3.5" />}
+                <span className="hidden md:inline">Certificate</span>
+              </button>
+            )}
+
+            {/* Keyboard Shortcuts Trigger */}
+            <button
+              onClick={() => setIsShortcutsOpen(true)}
+              className="p-2 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              title="Keyboard Hotkeys (?)"
+            >
+              <Keyboard className="w-4 h-4" />
+            </button>
 
             {/* Export Notes / Syllabus */}
             <a
@@ -1138,6 +1200,49 @@ const CourseDetail = () => {
         onTimestampClick={(seconds) => seekVideo(seconds)}
         onInsertToNotes={(text) => handleInsertAIAnswerToNotes(text)}
       />
+
+      {/* Certificate Modal */}
+      <CertificateModal
+        isOpen={isCertModalOpen}
+        onClose={() => setIsCertModalOpen(false)}
+        certData={certData}
+      />
+
+      {/* Keyboard Shortcuts HUD */}
+      {isShortcutsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md p-6 rounded-3xl bg-zinc-950 border border-zinc-800 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-zinc-900 pb-3">
+              <div className="flex items-center gap-2">
+                <Keyboard className="w-4 h-4 text-amber-400" />
+                <h3 className="text-sm font-bold text-white">Study Room Keyboard Shortcuts</h3>
+              </div>
+              <button
+                onClick={() => setIsShortcutsOpen(false)}
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-white transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              {[
+                { key: 'J / L', desc: 'Rewind / Fast Forward 10 seconds' },
+                { key: '?', desc: 'Toggle keyboard shortcuts menu' },
+                { key: 'Space', desc: 'Play / Pause synchronized video' },
+                { key: 'Tab', desc: 'Switch between Content and Notes' },
+              ].map((s, idx) => (
+                <div key={idx} className="flex items-center justify-between p-2 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
+                  <span className="text-zinc-300 font-medium">{s.desc}</span>
+                  <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-mono font-bold text-[11px] border border-amber-500/30">
+                    {s.key}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </Navbar>
   );
 };

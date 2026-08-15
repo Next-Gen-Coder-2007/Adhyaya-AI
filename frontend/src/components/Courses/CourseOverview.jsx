@@ -16,10 +16,12 @@ import {
   Trash2,
   Download,
   Award,
-  Sparkles
+  Sparkles,
+  ShieldCheck
 } from 'lucide-react';
 import api from '../../api/axios';
 import Navbar from '../Dashboard/Navbar';
+import CertificateModal from './CertificateModal';
 
 const getSectionIcon = (type) => {
   switch (type) {
@@ -61,6 +63,11 @@ const CourseOverview = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Certificate Modal State
+  const [certData, setCertData] = useState(null);
+  const [isCertModalOpen, setIsCertModalOpen] = useState(false);
+  const [loadingCert, setLoadingCert] = useState(false);
+
   useEffect(() => {
     const fetchCourseOverview = async () => {
       try {
@@ -90,6 +97,19 @@ const CourseOverview = () => {
     }));
   };
 
+  const handleOpenCertificate = async () => {
+    try {
+      setLoadingCert(true);
+      const res = await api.get(`/courses/${id}/certificate`);
+      setCertData(res.data);
+      setIsCertModalOpen(true);
+    } catch (err) {
+      console.error('Failed to generate certificate:', err);
+    } finally {
+      setLoadingCert(false);
+    }
+  };
+
   const handleDeleteCourse = async () => {
     setDeleting(true);
     try {
@@ -107,8 +127,8 @@ const CourseOverview = () => {
     return (
       <Navbar>
         <div className="flex flex-col items-center justify-center py-32 space-y-4">
-          <Loader2 className="h-10 w-10 animate-spin text-amber-500" />
-          <p className="text-zinc-400 text-xs tracking-wide">Assembling curriculum overview...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-amber-500 border-t-transparent" />
+          <p className="text-xs text-zinc-500">Loading course overview...</p>
         </div>
       </Navbar>
     );
@@ -138,6 +158,7 @@ const CourseOverview = () => {
   const assignmentCount = allSections.filter((s) => s.type === 'assignment').length;
   const completedCount = allSections.filter((s) => s.completed).length;
   const progressPercent = allSections.length > 0 ? Math.round((completedCount / allSections.length) * 100) : 0;
+  const isCompleted = progressPercent === 100;
 
   return (
     <Navbar>
@@ -153,6 +174,17 @@ const CourseOverview = () => {
           </button>
 
           <div className="flex items-center gap-3">
+            {isCompleted && (
+              <button
+                onClick={handleOpenCertificate}
+                disabled={loadingCert}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-extrabold text-xs shadow-lg shadow-amber-500/20 hover:opacity-90 transition-opacity cursor-pointer"
+              >
+                {loadingCert ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Award className="w-3.5 h-3.5" />}
+                <span>View Certificate</span>
+              </button>
+            )}
+
             <a
               href={`${api.defaults.baseURL || ''}/courses/${id}/export`}
               target="_blank"
@@ -174,41 +206,41 @@ const CourseOverview = () => {
         </div>
 
         {/* Hero Card */}
-        <div className="p-6 sm:p-8 rounded-3xl bg-zinc-950 border border-zinc-900 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-amber-500/5 blur-3xl pointer-events-none" />
+        <div className="p-6 sm:p-8 rounded-3xl bg-[var(--bg-secondary,#121215)] border border-[var(--border,rgba(255,255,255,0.08))] shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
 
           <div className="flex flex-col lg:flex-row items-start justify-between gap-8 relative z-10">
             <div className="space-y-4 max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-[11px] font-bold text-amber-400 uppercase tracking-widest">
-                <Sparkles className="w-3 h-3" />
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-[11px] font-bold text-amber-500 uppercase tracking-widest">
+                <Sparkles className="w-3.5 h-3.5" />
                 AI Generated Course
               </div>
 
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-snug">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--text-primary,#ffffff)] tracking-tight leading-snug">
                 {course.title}
               </h1>
 
-              <p className="text-sm text-zinc-400 leading-relaxed font-normal">
+              <p className="text-sm text-[var(--text-secondary,#a1a1aa)] leading-relaxed font-normal">
                 {course.description || 'Structured educational path curated from video sources.'}
               </p>
 
               {/* Course Meta Stats */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-                <div className="p-3 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
-                  <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">Modules</span>
-                  <span className="text-base font-bold text-white mt-0.5 block">{course.modules?.length || 0}</span>
+                <div className="p-3 rounded-xl bg-[var(--bg-tertiary,#1c1c21)] border border-[var(--border,rgba(255,255,255,0.08))]">
+                  <span className="text-[10px] text-[var(--text-muted,#71717a)] uppercase tracking-wider block">Modules</span>
+                  <span className="text-base font-bold text-[var(--text-primary,#ffffff)] mt-0.5 block">{course.modules?.length || 0}</span>
                 </div>
-                <div className="p-3 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
-                  <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">Lectures</span>
-                  <span className="text-base font-bold text-white mt-0.5 block">{videoCount}</span>
+                <div className="p-3 rounded-xl bg-[var(--bg-tertiary,#1c1c21)] border border-[var(--border,rgba(255,255,255,0.08))]">
+                  <span className="text-[10px] text-[var(--text-muted,#71717a)] uppercase tracking-wider block">Lectures</span>
+                  <span className="text-base font-bold text-[var(--text-primary,#ffffff)] mt-0.5 block">{videoCount}</span>
                 </div>
-                <div className="p-3 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
-                  <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">Quizzes</span>
-                  <span className="text-base font-bold text-white mt-0.5 block">{quizCount}</span>
+                <div className="p-3 rounded-xl bg-[var(--bg-tertiary,#1c1c21)] border border-[var(--border,rgba(255,255,255,0.08))]">
+                  <span className="text-[10px] text-[var(--text-muted,#71717a)] uppercase tracking-wider block">Quizzes</span>
+                  <span className="text-base font-bold text-[var(--text-primary,#ffffff)] mt-0.5 block">{quizCount}</span>
                 </div>
-                <div className="p-3 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
-                  <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">Completed</span>
-                  <span className="text-base font-bold text-amber-400 mt-0.5 block">{progressPercent}%</span>
+                <div className="p-3 rounded-xl bg-[var(--bg-tertiary,#1c1c21)] border border-[var(--border,rgba(255,255,255,0.08))]">
+                  <span className="text-[10px] text-[var(--text-muted,#71717a)] uppercase tracking-wider block">Completed</span>
+                  <span className="text-base font-bold text-amber-500 mt-0.5 block">{progressPercent}%</span>
                 </div>
               </div>
             </div>
@@ -216,7 +248,7 @@ const CourseOverview = () => {
             {/* Thumbnail and Start Button */}
             <div className="w-full lg:w-72 space-y-4 shrink-0">
               {course.image_url && (
-                <div className="aspect-video rounded-2xl overflow-hidden border border-zinc-800 relative group shadow-xl">
+                <div className="aspect-video rounded-2xl overflow-hidden border border-[var(--border)] relative group shadow-xl">
                   <img
                     src={course.image_url}
                     alt={course.title}
@@ -246,63 +278,68 @@ const CourseOverview = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-base font-bold text-white">Course Syllabus</h3>
-              <p className="text-xs text-zinc-500">Explore modules, learning nodes, and assignments</p>
+              <h3 className="text-base font-bold text-[var(--text-primary,#ffffff)]">Course Syllabus</h3>
+              <p className="text-xs text-[var(--text-muted,#71717a)]">Explore modules, learning nodes, and assignments</p>
             </div>
-            <span className="text-xs font-mono text-zinc-400 font-semibold">
-              {course.modules?.length || 0} Modules · {allSections.length} Total Lessons
+            <span className="text-xs font-semibold text-[var(--text-secondary,#a1a1aa)]">
+              {completedCount} of {allSections.length} items completed
             </span>
           </div>
 
-          <div className="bg-zinc-950 border border-zinc-900 rounded-2xl divide-y divide-zinc-900 overflow-hidden shadow-xl">
-            {course.modules?.map((module, mIdx) => {
+          <div className="space-y-3">
+            {course.modules?.map((module, idx) => {
               const isExpanded = !!expandedModules[module.id];
-              const moduleSections = module.sections || [];
+              const modSections = module.sections || [];
+              const modCompleted = modSections.filter((s) => s.completed).length;
 
               return (
-                <div key={module.id || mIdx} className="bg-zinc-950/40">
+                <div
+                  key={module.id}
+                  className="rounded-2xl bg-[var(--bg-secondary,#121215)] border border-[var(--border,rgba(255,255,255,0.08))] overflow-hidden transition-all shadow-sm"
+                >
                   <button
                     onClick={() => toggleModule(module.id)}
-                    className="w-full p-5 text-left flex items-start justify-between gap-4 hover:bg-zinc-900/50 transition-colors cursor-pointer group"
+                    className="w-full p-4 flex items-center justify-between text-left hover:bg-white/5 transition-colors cursor-pointer"
                   >
-                    <div className="space-y-1 min-w-0">
-                      <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest block">
-                        Module {mIdx + 1}
+                    <div className="flex items-center gap-3">
+                      <span className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-500 font-bold text-xs flex items-center justify-center font-mono">
+                        {idx + 1}
                       </span>
-                      <h4 className="font-semibold text-sm text-zinc-200 group-hover:text-white transition-colors">
-                        {module.title}
-                      </h4>
-                      <p className="text-[11px] text-zinc-500">
-                        {moduleSections.length} sections included
-                      </p>
+                      <div>
+                        <h4 className="text-sm font-bold text-[var(--text-primary,#ffffff)]">{module.title}</h4>
+                        <p className="text-[11px] text-[var(--text-muted,#71717a)]">
+                          {modCompleted} of {modSections.length} completed
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="text-zinc-500 group-hover:text-zinc-300 p-1 shrink-0">
-                      {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                    <div className="flex items-center gap-2 text-zinc-400">
+                      {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                     </div>
                   </button>
 
                   {isExpanded && (
-                    <div className="bg-zinc-900/30 border-t border-zinc-900 px-6 py-2 divide-y divide-zinc-900/60">
-                      {moduleSections.map((section, sIdx) => (
+                    <div className="border-t border-[var(--border,rgba(255,255,255,0.08))] p-3 bg-[var(--bg-tertiary,#1c1c21)] space-y-2">
+                      {modSections.map((section) => (
                         <div
-                          key={sIdx}
-                          className="py-3 flex items-center justify-between text-xs text-zinc-300 gap-4"
+                          key={section.id}
+                          onClick={() => navigate(`/courses/${id}/learn`)}
+                          className="flex items-center justify-between p-2.5 rounded-xl hover:bg-white/5 transition-colors cursor-pointer text-xs"
                         >
-                          <div className="flex items-center gap-3 min-w-0">
+                          <div className="flex items-center gap-2.5 min-w-0">
                             {getSectionIcon(section.type)}
-                            <span className="font-medium truncate">{section.title}</span>
+                            <span className="text-[var(--text-secondary,#a1a1aa)] hover:text-[var(--text-primary,#ffffff)] truncate font-medium">
+                              {section.title}
+                            </span>
                           </div>
 
-                          <div className="flex items-center gap-2 shrink-0">
-                            {section.completed && (
-                              <span className="text-[10px] px-2 py-0.5 rounded bg-green-500/10 text-green-400 font-bold">
-                                Done
-                              </span>
-                            )}
-                            <span className="text-[10px] px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 uppercase font-medium">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-[var(--text-muted,#71717a)] uppercase tracking-wider font-mono">
                               {getSectionTypeLabel(section.type)}
                             </span>
+                            {section.completed && (
+                              <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                            )}
                           </div>
                         </div>
                       ))}
@@ -316,37 +353,39 @@ const CourseOverview = () => {
 
         {/* Delete Confirmation Modal */}
         {showDeleteModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-            <div className="w-full max-w-md p-6 rounded-3xl bg-zinc-950 border border-zinc-800 space-y-4 shadow-2xl">
-              <div className="w-12 h-12 rounded-2xl bg-red-950/40 border border-red-800/60 flex items-center justify-center text-red-400">
-                <Trash2 className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-white">Delete Course</h3>
-                <p className="text-xs text-zinc-400 mt-1">
-                  Are you sure you want to delete <strong className="text-zinc-200">{course.title}</strong>? This action cannot be undone.
-                </p>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-2">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
+            <div className="w-full max-w-md p-6 rounded-3xl bg-zinc-950 border border-zinc-800 shadow-2xl space-y-4">
+              <h3 className="text-base font-bold text-white">Delete Course</h3>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Are you sure you want to delete "{course.title}"? This action will permanently remove all modules, quiz scores, and vector embeddings.
+              </p>
+              <div className="flex justify-end gap-2 pt-2">
                 <button
                   onClick={() => setShowDeleteModal(false)}
                   disabled={deleting}
-                  className="px-4 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs font-semibold text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white bg-zinc-900 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleDeleteCourse}
                   disabled={deleting}
-                  className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-red-600 hover:bg-red-500 transition-colors flex items-center gap-1.5"
                 >
-                  {deleting ? 'Deleting...' : 'Delete Course'}
+                  {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                  <span>Delete Permanently</span>
                 </button>
               </div>
             </div>
           </div>
         )}
+
+        {/* Certificate Modal */}
+        <CertificateModal
+          isOpen={isCertModalOpen}
+          onClose={() => setIsCertModalOpen(false)}
+          certData={certData}
+        />
       </div>
     </Navbar>
   );

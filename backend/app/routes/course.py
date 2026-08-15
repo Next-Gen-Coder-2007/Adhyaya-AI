@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, Response
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Dict, Any
 import traceback
+import hashlib
+from datetime import datetime
 
 from app.core.database import get_db, SessionLocal
 from app.models.course import Course
@@ -70,30 +72,33 @@ def generate_course_modules_task(
                 db.add(section)
                 sections_for_embed.append(section_data)
 
-            modules_for_embed.append({
-                "title": module_data["title"],
-                "sections": sections_for_embed,
-            })
+            module_dict = dict(module_data)
+            module_dict["sections"] = sections_for_embed
+            modules_for_embed.append(module_dict)
 
         course.status = "completed"
-        course.error_message = None
         db.commit()
-        db.refresh(course)
-        print(f"[BACKGROUND TASK SUCCESS] Course {course_id} completed successfully with {len(result['modules'])} modules.")
 
+        # ChromaDB Vector Store Embeddings
         try:
-            embed_course(course_id, modules_for_embed)
-        except Exception as e:
-            print(f"[EMBED ERROR] Failed to embed course {course_id}: {e}")
+            print(f"[EMBEDDING] Indexing vector embeddings for course {course_id} in ChromaDB...")
+            embed_course(
+                course_id=course_id,
+                course_title=course.title,
+                modules=modules_for_embed,
+            )
+            print(f"[EMBEDDING] Successfully indexed course {course_id}")
+        except Exception as embed_err:
+            print(f"[EMBEDDING ERROR] Failed to embed course {course_id}: {embed_err}")
 
     except Exception as e:
-        print(f"[BACKGROUND TASK ERROR] Failed generating course {course_id}: {e}")
+        print(f"[BACKGROUND TASK ERROR] Failed to generate course {course_id}: {e}")
         traceback.print_exc()
         try:
             course = db.query(Course).filter(Course.id == course_id).first()
             if course:
                 course.status = "failed"
-                course.error_message = f"Generation failed: {str(e)[:200]}"
+                course.error_message = str(e)
                 db.commit()
         except Exception:
             pass
@@ -101,68 +106,76 @@ def generate_course_modules_task(
         db.close()
 
 
-
-@router.post("/", response_model=CourseResponse)
+@router.post("", response_model=CourseResponse)
 def create_course(
-    course: CourseCreate,
+    data: CourseCreate,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    new_course = Course(
-        title=course.title,
-        description=course.description,
-        image_url=course.image_url,
-        youtube_url=course.youtube_url,
-        user_id=current_user.id,
-        is_playlist=course.is_playlist,
+    course = Course(
+        title=data.title or "Interactive Course Track",
+        description=data.description or "AI synthesized interactive course modules.",
+        image_url=data.image_url,
+        video_url=data.video_url,
+        is_playlist=data.is_playlist,
         status="generating",
-        notes="",
+        user_id=current_user.id,
     )
-    db.add(new_course)
+    db.add(course)
     db.commit()
-    db.refresh(new_course)
+    db.refresh(course)
 
     background_tasks.add_task(
         generate_course_modules_task,
-        new_course.id,
-        course.youtube_url,
-        course.is_playlist,
+        course.id,
+        data.video_url,
+        data.is_playlist,
     )
-    return new_course
+
+    return course
 
 
-@router.get("/", response_model=List[CourseResponse])
-def get_my_courses(
+@router.get("", response_model=List[CourseResponse])
+def get_user_courses(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     return (
         db.query(Course)
-        .options(joinedload(Course.modules).joinedload(Module.sections))
+        .options(
+            joinedload(Course.modules).joinedload(Module.sections)
+        )
         .filter(Course.user_id == current_user.id)
-        .order_by(Course.id.desc())
+        .order_by(Course.created_at.desc())
         .all()
     )
 
 
 @router.get("/{course_id}", response_model=CourseResponse)
-def get_course(
+def get_course_detail(
     course_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     course = (
         db.query(Course)
-        .options(joinedload(Course.modules).joinedload(Module.sections))
+        .options(
+            joinedload(Course.modules).joinedload(Module.sections)
+        )
         .filter(
             Course.id == course_id,
-            Course.user_id == current_user.id,
+            Course.user_id == current_user.id
         )
         .first()
     )
+
     if not course:
-        raise HTTPException(status_code=404, detail="Course not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Course not found"
+        )
+
     return course
 
 
@@ -172,21 +185,27 @@ def delete_course(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    course = db.query(Course).filter(
-        Course.id == course_id,
-        Course.user_id == current_user.id,
-    ).first()
+    course = (
+        db.query(Course)
+        .filter(
+            Course.id == course_id,
+            Course.user_id == current_user.id
+        )
+        .first()
+    )
+
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
 
     try:
         delete_course_embeddings(course_id)
     except Exception as e:
-        print(f"[EMBED] Non-critical error deleting embeddings for course {course_id}: {e}")
+        print(f"[EMBEDDING DELETE WARNING] {e}")
 
     db.delete(course)
     db.commit()
-    return {"detail": "Course deleted successfully"}
+
+    return {"message": "Course and vector index deleted successfully"}
 
 
 @router.get("/{course_id}/notes")
@@ -195,10 +214,11 @@ def get_course_notes(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    course = db.query(Course).filter(
-        Course.id == course_id,
-        Course.user_id == current_user.id,
-    ).first()
+    course = (
+        db.query(Course)
+        .filter(Course.id == course_id, Course.user_id == current_user.id)
+        .first()
+    )
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
 
@@ -212,20 +232,22 @@ def update_course_notes(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    course = db.query(Course).filter(
-        Course.id == course_id,
-        Course.user_id == current_user.id,
-    ).first()
+    course = (
+        db.query(Course)
+        .filter(Course.id == course_id, Course.user_id == current_user.id)
+        .first()
+    )
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
 
     course.notes = data.notes
     db.commit()
+
     return {"message": "Notes saved successfully", "notes": course.notes}
 
 
 @router.get("/{course_id}/export")
-def export_course(
+def export_course_markdown(
     course_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -239,44 +261,99 @@ def export_course(
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
 
-    lines = [
+    md_lines = [
         f"# {course.title}",
-        f"\n**Description:** {course.description}",
-        f"\n**Source:** {course.youtube_url or 'N/A'}",
+        f"\n**Course Overview:** {course.description or 'N/A'}",
+        f"**Video Reference:** {course.video_url}",
+        f"**Generated via:** Adhyaya AI Learning Platform",
         "\n---\n",
-        "## Course Syllabus\n"
+        "## Curriculum Outline & Learning Modules\n",
     ]
 
-    for m_idx, module in enumerate(course.modules, start=1):
-        lines.append(f"### Module {m_idx}: {module.title}")
-        for s_idx, section in enumerate(module.sections, start=1):
-            status_mark = " [x]" if section.completed else " [ ]"
-            lines.append(f"- {status_mark} **{section.title}** ({section.type.upper()})")
-        lines.append("")
+    for idx, mod in enumerate(course.modules or [], start=1):
+        md_lines.append(f"### Module {idx}: {mod.title}")
+        for s_idx, sec in enumerate(mod.sections or [], start=1):
+            status = "[x]" if sec.completed else "[ ]"
+            score_badge = f" (Quiz Score: {sec.quiz_score}%)" if sec.quiz_score is not None else ""
+            md_lines.append(f"- {status} **{sec.title}** ({sec.type}){score_badge}")
+
+            if sec.content:
+                synopsis = sec.content.get("synopsis") or sec.content.get("description")
+                if synopsis:
+                    md_lines.append(f"  - *Synopsis:* {synopsis}")
+        md_lines.append("")
 
     if course.notes:
-        lines.append("\n---\n## Student Study Notes\n")
-        lines.append(course.notes)
+        md_lines.append("\n---\n## Student Study Notes & Scratchpad\n")
+        md_lines.append(course.notes)
 
-    markdown_content = "\n".join(lines)
+    content = "\n".join(md_lines)
     return Response(
-        content=markdown_content,
+        content=content,
         media_type="text/markdown",
-        headers={"Content-Disposition": f"attachment; filename=course_{course_id}_notes.md"}
+        headers={
+            "Content-Disposition": f'attachment; filename="adhyaya-course-{course.id}.md"'
+        },
     )
 
 
-@router.post("/{course_id}/chat", response_model=ChatResponse)
-def course_chat(
+@router.get("/{course_id}/certificate")
+def get_course_certificate(
     course_id: int,
-    body: ChatRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    course = db.query(Course).options(joinedload(Course.modules)).filter(
-        Course.id == course_id,
-        Course.user_id == current_user.id,
-    ).first()
+    course = (
+        db.query(Course)
+        .options(joinedload(Course.modules).joinedload(Module.sections))
+        .filter(Course.id == course_id, Course.user_id == current_user.id)
+        .first()
+    )
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    all_sections = [s for m in (course.modules or []) for s in (m.sections or [])]
+    total_sections = len(all_sections)
+    completed_sections = len([s for s in all_sections if s.completed])
+    
+    quiz_scores = [s.quiz_score for s in all_sections if s.quiz_score is not None]
+    avg_mastery = round(sum(quiz_scores) / len(quiz_scores)) if quiz_scores else 100
+
+    is_eligible = total_sections > 0 and completed_sections == total_sections
+
+    raw_signature = f"ADHYAYA-CERT-{course.id}-{current_user.id}-{course.created_at}"
+    cert_hash = hashlib.sha256(raw_signature.encode("utf-8")).hexdigest()[:12].upper()
+    certificate_id = f"ADY-{course.id:03d}-{cert_hash}"
+
+    issued_date = datetime.utcnow().strftime("%B %d, %Y")
+
+    return {
+        "certificate_id": certificate_id,
+        "is_eligible": is_eligible,
+        "course_id": course.id,
+        "course_title": course.title,
+        "student_name": current_user.name or "Adhyaya Scholar",
+        "student_email": current_user.email,
+        "total_lessons": total_sections,
+        "completed_lessons": completed_sections,
+        "mastery_score": max(avg_mastery, 80),
+        "issued_at": issued_date,
+        "verification_hash": cert_hash
+    }
+
+
+@router.post("/{course_id}/chat", response_model=ChatResponse)
+def chat_with_course(
+    course_id: int,
+    data: ChatRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    course = (
+        db.query(Course)
+        .filter(Course.id == course_id, Course.user_id == current_user.id)
+        .first()
+    )
 
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
@@ -284,19 +361,22 @@ def course_chat(
     if course.status != "completed":
         raise HTTPException(
             status_code=400,
-            detail="Course is still generating. Please wait until it's ready.",
+            detail="Course is still being generated. Please wait."
         )
 
-    module_titles = [m.title for m in course.modules]
-    history_dicts = [{"role": m.role, "content": m.content} for m in body.history]
-
-    result = rag_chat(
-        course_id=course_id,
-        question=body.question,
-        history=history_dicts,
-        course_title=course.title,
-        module_titles=module_titles,
-    )
+    try:
+        result = rag_chat(
+            course_id=course_id,
+            question=data.question,
+            history=data.history or [],
+        )
+    except Exception as e:
+        print(f"[RAG CHAT ERROR] {e}")
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"RAG tutor error: {str(e)}"
+        )
 
     return ChatResponse(answer=result["answer"], sources=result["sources"])
 
@@ -367,4 +447,4 @@ def submit_quiz_score(
         "id": section.id,
         "score": section.quiz_score,
         "completed": section.completed
-    }
+    }
