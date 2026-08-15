@@ -362,10 +362,13 @@ def chat_with_course(
         )
 
     try:
+        history_dicts = [{"role": h.role, "content": h.content} for h in (data.history or [])]
         result = rag_chat(
             course_id=course_id,
             question=data.question,
-            history=data.history or [],
+            history=history_dicts,
+            course_title=course.title,
+            module_titles=[m.title for m in (course.modules or [])]
         )
     except Exception as e:
         print(f"[RAG CHAT ERROR] {e}")

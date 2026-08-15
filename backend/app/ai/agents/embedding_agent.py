@@ -180,6 +180,7 @@ def _extract_text(section: Dict[str, Any]) -> str:
 def embed_course(
     course_id: int,
     modules: List[Dict[str, Any]],
+    course_title: Optional[str] = None,
 ) -> None:
     collection = _get_collection(course_id)
 
@@ -224,6 +225,7 @@ def embed_course(
                 metadatas.append(
                     {
                         "course_id": str(course_id),
+                        "course_title": str(course_title or ""),
                         "module_title": module_title,
                         "section_type": section.get("type", ""),
                         "section_title": section.get("title", ""),

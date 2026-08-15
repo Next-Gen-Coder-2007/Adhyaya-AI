@@ -3,6 +3,7 @@ import re
 import logging
 from youtube_transcript_api import YouTubeTranscriptApi
 from googleapiclient.discovery import build
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -118,7 +119,7 @@ def get_playlist_videos(playlist_url: str) -> list[dict]:
         if not match:
             return []
 
-        from app.core.config import settings
+        playlist_id = match.group(1)
         api_key = settings.YOUTUBE_API_KEY
         if not api_key:
             logger.warning("[PLAYLIST ERROR] YOUTUBE_API_KEY not configured in settings.")
