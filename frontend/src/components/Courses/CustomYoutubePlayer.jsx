@@ -9,7 +9,10 @@ import {
   SkipForward,
   Maximize,
   Minimize,
+  Gauge
 } from 'lucide-react';
+
+const SPEED_OPTIONS = [0.75, 1, 1.25, 1.5, 2];
 
 const CustomYouTubePlayer = React.memo(({
   videoId,
@@ -17,20 +20,22 @@ const CustomYouTubePlayer = React.memo(({
   endTime = null,
   onReady,
   onError,
+  onTimeUpdate
 }) => {
   const [player, setPlayer] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(startTime);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(50);
+  const [volume, setVolume] = useState(75);
   const [isMuted, setIsMuted] = useState(false);
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [playerError, setPlayerError] = useState(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const intervalRef = useRef(null);
   const containerRef = useRef(null);
   const playerRef = useRef(null);
 
-  // Memoize opts to avoid unnecessary recreations
   const opts = React.useMemo(() => ({
     height: '100%',
     width: '100%',
@@ -43,92 +48,92 @@ const CustomYouTubePlayer = React.memo(({
       modestbranding: 1,
       rel: 0,
       showinfo: 0,
-      start: startTime,
+      start: Math.floor(startTime),
       enablejsapi: 1,
-      origin: window.location.origin,
-      widget_referrer: window.location.href,
+      origin: typeof window !== 'undefined' ? window.location.origin : '',
+      widget_referrer: typeof window !== 'undefined' ? window.location.href : '',
     },
   }), [startTime]);
 
-  // Handle player ready event
   const onPlayerReady = useCallback((event) => {
     const playerInstance = event.target;
     playerRef.current = playerInstance;
     setPlayer(playerInstance);
-    setDuration(playerInstance.getDuration());
+    setDuration(playerInstance.getDuration() || 0);
     playerInstance.setVolume(volume);
     if (isMuted) playerInstance.mute();
     if (onReady) onReady(playerInstance);
 
-    // Seek to startTime immediately after player is ready
     if (startTime && startTime !== playerInstance.getCurrentTime()) {
       playerInstance.seekTo(startTime, true);
     }
   }, [volume, isMuted, startTime, onReady]);
 
-  // Handle player state change
   const onPlayerStateChange = useCallback((event) => {
     if (event.data === 1) setIsPlaying(true);
     else if (event.data === 2 || event.data === 0) setIsPlaying(false);
   }, []);
 
-  // Handle player error
   const onPlayerError = useCallback((event) => {
-    setPlayerError('Failed to load video. Please try again later.');
-    if (onError) onError('Failed to load video. Please try again later.');
+    console.error("YouTube error event:", event);
+    setPlayerError('Failed to load video player. Please check URL or connection.');
+    if (onError) onError('Failed to load video. Please try again.');
   }, [onError]);
 
-  // Update current time
   const updateTime = useCallback(() => {
-    if (playerRef.current) {
-      const newTime = playerRef.current.getCurrentTime();
-      setCurrentTime(newTime);
-      if (endTime && newTime >= endTime) {
-        playerRef.current.pauseVideo();
-        playerRef.current.seekTo(startTime);
+    if (playerRef.current && typeof playerRef.current.getCurrentTime === 'function') {
+      try {
+        const newTime = playerRef.current.getCurrentTime();
+        setCurrentTime(newTime);
+        if (onTimeUpdate) {
+          onTimeUpdate(newTime);
+        }
+        if (endTime && newTime >= endTime) {
+          playerRef.current.pauseVideo();
+        }
+      } catch (e) {
+        // ignore iframe access errors during teardown
       }
     }
-  }, [endTime, startTime]);
+  }, [endTime, onTimeUpdate]);
 
-  // Set up interval to update current time
   useEffect(() => {
     if (playerRef.current) {
-      intervalRef.current = setInterval(updateTime, 1000);
+      intervalRef.current = setInterval(updateTime, 500);
     }
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [updateTime]);
 
-  // Clean up player on unmount
   useEffect(() => {
     return () => {
       if (playerRef.current) {
         try {
           playerRef.current.destroy();
         } catch (e) {
-          console.warn('Player cleanup failed:', e);
+          // ignore
         }
       }
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, []);
 
-  // Handle videoId and startTime changes
   useEffect(() => {
-    if (playerRef.current && videoId) {
-      const currentVideoId = playerRef.current.getVideoUrl()?.split('v=')[1]?.split('&')[0];
-      if (currentVideoId !== videoId) {
-        // Load the new video and seek to startTime
-        playerRef.current.loadVideoById(videoId, startTime);
-      } else if (startTime !== playerRef.current.getCurrentTime()) {
-        // If the video is the same but startTime changed, seek to it
-        playerRef.current.seekTo(startTime, true);
+    if (playerRef.current && videoId && typeof playerRef.current.getVideoUrl === 'function') {
+      try {
+        const currentVideoId = playerRef.current.getVideoUrl()?.split('v=')[1]?.split('&')[0];
+        if (currentVideoId !== videoId) {
+          playerRef.current.loadVideoById(videoId, startTime);
+        } else if (Math.abs(startTime - playerRef.current.getCurrentTime()) > 2) {
+          playerRef.current.seekTo(startTime, true);
+        }
+      } catch (e) {
+        // ignore
       }
     }
   }, [videoId, startTime]);
 
-  // Toggle play/pause
   const togglePlayPause = useCallback(() => {
     if (playerRef.current) {
       if (isPlaying) playerRef.current.pauseVideo();
@@ -137,7 +142,6 @@ const CustomYouTubePlayer = React.memo(({
     }
   }, [isPlaying]);
 
-  // Seek to a specific time
   const seekTo = useCallback((time) => {
     if (playerRef.current) {
       playerRef.current.seekTo(time, true);
@@ -145,17 +149,13 @@ const CustomYouTubePlayer = React.memo(({
     }
   }, []);
 
-  // Skip forward or backward
   const skip = useCallback((seconds) => {
     if (playerRef.current) {
-      const newTime = currentTime + seconds;
-      if (newTime >= startTime && (endTime ? newTime <= endTime : true)) {
-        seekTo(newTime);
-      }
+      const newTime = Math.max(0, currentTime + seconds);
+      seekTo(newTime);
     }
-  }, [currentTime, startTime, endTime, seekTo]);
+  }, [currentTime, seekTo]);
 
-  // Toggle mute
   const toggleMute = useCallback(() => {
     if (playerRef.current) {
       if (isMuted) playerRef.current.unMute();
@@ -164,9 +164,8 @@ const CustomYouTubePlayer = React.memo(({
     }
   }, [isMuted]);
 
-  // Handle volume change
   const handleVolumeChange = useCallback((e) => {
-    const newVolume = parseInt(e.target.value);
+    const newVolume = parseInt(e.target.value, 10);
     setVolume(newVolume);
     if (playerRef.current) {
       playerRef.current.setVolume(newVolume);
@@ -175,96 +174,81 @@ const CustomYouTubePlayer = React.memo(({
     }
   }, []);
 
-  // Format time for display
+  const handleSpeedChange = (rate) => {
+    setPlaybackRate(rate);
+    setShowSpeedMenu(false);
+    if (playerRef.current && typeof playerRef.current.setPlaybackRate === 'function') {
+      playerRef.current.setPlaybackRate(rate);
+    }
+  };
+
   const formatTime = (seconds) => {
-    if (isNaN(seconds) || seconds === undefined) return '00:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
+    if (isNaN(seconds) || seconds === undefined || seconds === null) return '00:00';
+    const totalSecs = Math.floor(seconds);
+    const hours = Math.floor(totalSecs / 3600);
+    const mins = Math.floor((totalSecs % 3600) / 60);
+    const secs = totalSecs % 60;
+    if (hours > 0) {
+      return `${hours}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  // Calculate progress percentage
-  const progressPercent = endTime
-    ? ((currentTime - startTime) / (endTime - startTime)) * 100
-    : (currentTime / duration) * 100;
+  const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-  // Handle progress bar click
   const handleProgressClick = useCallback((e) => {
-    if (!playerRef.current) return;
+    if (!playerRef.current || duration <= 0) return;
     const progressBar = e.currentTarget;
     const rect = progressBar.getBoundingClientRect();
     const clickPosition = e.clientX - rect.left;
-    const percent = (clickPosition / rect.width) * 100;
-    const newTime = endTime
-      ? startTime + (percent / 100) * (endTime - startTime)
-      : (percent / 100) * duration;
+    const percent = Math.max(0, Math.min(1, clickPosition / rect.width));
+    const newTime = percent * duration;
     seekTo(newTime);
-  }, [startTime, endTime, duration, seekTo]);
+  }, [duration, seekTo]);
 
-  // Toggle fullscreen
   const toggleFullscreen = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
     if (!isFullscreen) {
       if (container.requestFullscreen) container.requestFullscreen();
       else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
-      else if (container.msRequestFullscreen) container.msRequestFullscreen();
     } else {
       if (document.exitFullscreen) document.exitFullscreen();
       else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-      else if (document.msExitFullscreen) document.msExitFullscreen();
     }
     setIsFullscreen(!isFullscreen);
   }, [isFullscreen]);
 
-  // Handle fullscreen change
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
     };
     document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-    document.addEventListener('msfullscreenchange', handleFullscreenChange);
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('msfullscreenchange', handleFullscreenChange);
-    };
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  // Styles
-  const styles = {
-    bg: 'bg-zinc-900',
-    progress: 'bg-zinc-700',
-    progressFilled: 'bg-amber-500',
-    button: 'text-zinc-300 hover:text-white',
-    buttonActive: 'text-amber-500',
-    slider: 'bg-zinc-700',
-    sliderThumb: 'bg-amber-500',
-  };
-
-  // Render error state
   if (playerError) {
     return (
-      <div className={`rounded-xl ${styles.bg} p-4 text-center w-full`}>
-        <p className="text-red-500 text-sm">{playerError}</p>
+      <div className="rounded-2xl bg-zinc-950 border border-zinc-800 p-8 text-center w-full">
+        <p className="text-red-400 text-sm font-medium">{playerError}</p>
         <button
-          onClick={() => window.location.reload()}
-          className="mt-2 px-4 py-2 bg-zinc-800 text-white text-xs rounded-lg hover:bg-zinc-700"
+          onClick={() => {
+            setPlayerError(null);
+          }}
+          className="mt-3 px-4 py-2 bg-zinc-800 text-white text-xs font-semibold rounded-lg hover:bg-zinc-700 transition-colors"
         >
-          Retry
+          Reload Player
         </button>
       </div>
     );
   }
 
-  // Main render
   return (
     <div
       ref={containerRef}
-      className={`rounded-xl ${styles.bg} w-full overflow-visible relative`}
+      className="rounded-2xl bg-zinc-950 border border-zinc-800/80 overflow-hidden shadow-2xl transition-all duration-300 w-full"
     >
-      <div className="aspect-video w-full bg-black relative">
+      <div className="aspect-video w-full bg-black relative overflow-hidden">
         <YouTube
           videoId={videoId}
           opts={opts}
@@ -273,74 +257,116 @@ const CustomYouTubePlayer = React.memo(({
           onError={onPlayerError}
           className="w-full h-full absolute top-0 left-0"
         />
-        <style>{`
-          .youtube-iframe iframe {
-            pointer-events: none !important;
-          }
-        `}</style>
       </div>
 
-      <div className="p-4 space-y-3 w-full">
+      <div className="p-4 space-y-3 bg-zinc-950 border-t border-zinc-800/60">
+        {/* Progress bar */}
         <div
-          className={`h-1 rounded-full cursor-pointer ${styles.progress}`}
+          className="group relative h-2 bg-zinc-800 rounded-full cursor-pointer overflow-hidden transition-all hover:h-2.5"
           onClick={handleProgressClick}
         >
           <div
-            className={`h-full rounded-full ${styles.progressFilled}`}
-            style={{ width: `${progressPercent}%` }}
+            className="h-full rounded-full transition-all duration-150"
+            style={{
+              width: `${Math.min(100, Math.max(0, progressPercent))}%`,
+              background: 'var(--color-accent, #f59e0b)',
+            }}
           />
         </div>
 
-        <div className="flex items-center justify-between text-xs text-zinc-400">
-          <span>{formatTime(currentTime)}</span>
-          <span>{endTime ? formatTime(endTime) : formatTime(duration)}</span>
-        </div>
-
+        {/* Controls and Timestamps */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <button onClick={toggleMute} className={styles.button} disabled={!player}>
-              {isMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            </button>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              value={isMuted ? 0 : volume}
-              onChange={handleVolumeChange}
-              className={`w-20 h-1 rounded-full appearance-none cursor-pointer ${styles.slider}`}
-              disabled={!player}
-            />
-          </div>
-
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => skip(-5)}
-              className={`transition-colors ${styles.button}`}
-              disabled={!player}
-            >
-              <SkipBack className="w-5 h-5" />
-            </button>
+          <div className="flex items-center gap-3">
+            {/* Play/Pause */}
             <button
               onClick={togglePlayPause}
-              className={`transition-colors ${isPlaying ? styles.buttonActive : styles.button}`}
-              disabled={!player}
+              className="p-1.5 rounded-lg text-zinc-300 hover:text-white transition-colors cursor-pointer"
+              title={isPlaying ? "Pause" : "Play"}
             >
-              {isPlaying ? <PauseCircle className="w-6 h-6" /> : <PlayCircle className="w-6 h-6" />}
-            </button>
-            <button
-              onClick={() => skip(5)}
-              className={`transition-colors ${styles.button}`}
-              disabled={!player}
-            >
-              <SkipForward className="w-5 h-5" />
+              {isPlaying ? (
+                <PauseCircle className="w-6 h-6 text-amber-500" style={{ color: 'var(--color-accent, #f59e0b)' }} />
+              ) : (
+                <PlayCircle className="w-6 h-6 hover:scale-105 transition-transform" />
+              )}
             </button>
 
+            {/* Skips */}
+            <button
+              onClick={() => skip(-10)}
+              className="p-1 text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
+              title="Skip back 10s"
+            >
+              <SkipBack className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => skip(10)}
+              className="p-1 text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
+              title="Skip forward 10s"
+            >
+              <SkipForward className="w-4 h-4" />
+            </button>
+
+            {/* Volume */}
+            <div className="flex items-center gap-1.5 ml-1">
+              <button
+                onClick={toggleMute}
+                className="text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
+              >
+                {isMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              </button>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={isMuted ? 0 : volume}
+                onChange={handleVolumeChange}
+                className="w-16 sm:w-20 h-1 bg-zinc-800 rounded-full appearance-none cursor-pointer accent-amber-500"
+              />
+            </div>
+
+            {/* Time display */}
+            <div className="text-xs font-mono text-zinc-400 ml-2">
+              <span className="text-zinc-200 font-semibold">{formatTime(currentTime)}</span>
+              <span className="text-zinc-600 mx-1">/</span>
+              <span>{formatTime(duration)}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 relative">
+            {/* Playback speed selector */}
+            <div className="relative">
+              <button
+                onClick={() => setShowSpeedMenu(!showSpeedMenu)}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-900 border border-zinc-800 text-xs font-medium text-zinc-300 hover:text-white transition-colors cursor-pointer"
+              >
+                <Gauge className="w-3.5 h-3.5 text-zinc-400" />
+                <span>{playbackRate}x</span>
+              </button>
+
+              {showSpeedMenu && (
+                <div className="absolute bottom-full right-0 mb-2 py-1 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-20 flex flex-col min-w-[80px]">
+                  {SPEED_OPTIONS.map((rate) => (
+                    <button
+                      key={rate}
+                      onClick={() => handleSpeedChange(rate)}
+                      className={`px-3 py-1.5 text-xs text-left transition-colors hover:bg-zinc-800 ${
+                        playbackRate === rate ? 'text-amber-400 font-bold' : 'text-zinc-400'
+                      }`}
+                    >
+                      {rate}x
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Fullscreen */}
             <button
               onClick={toggleFullscreen}
-              className={`transition-colors ${styles.button}`}
-              disabled={!player}
+              className="p-1.5 rounded-lg text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              title="Fullscreen"
             >
-              {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+              {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
             </button>
           </div>
         </div>
