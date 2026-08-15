@@ -1,87 +1,138 @@
-import { Users, Target, FileText, CheckCircle, Edit3, BookOpen, HelpCircle } from "lucide-react";
+import { useState } from 'react';
+import {
+  Layers,
+  FileText,
+  CheckCircle,
+  Terminal,
+  Compass,
+  Bot,
+  Sparkles,
+  ArrowRight
+} from 'lucide-react';
+
+const agents = [
+  {
+    id: 'curriculum',
+    name: 'Curriculum Agent',
+    role: 'Structure & Prerequisites',
+    icon: Layers,
+    accent: 'from-amber-500 to-amber-600',
+    description: 'Deconstructs transcripts, maps logical milestones, and organizes content into hierarchical course modules.',
+    capability: 'Synthesizes module hierarchy & prerequisite sequences.',
+  },
+  {
+    id: 'content',
+    name: 'Content Structuring Agent',
+    role: 'Timeline & Synopses',
+    icon: FileText,
+    accent: 'from-blue-500 to-indigo-600',
+    description: 'Maps timeline start/end points, extracts core definitions, and writes comprehensive lesson summaries.',
+    capability: 'Synchronizes timestamps with transcript highlights.',
+  },
+  {
+    id: 'quiz',
+    name: 'Assessment Generation Agent',
+    role: 'Retention & Grading',
+    icon: CheckCircle,
+    accent: 'from-emerald-500 to-teal-600',
+    description: 'Generates MCQs, True/False, and conceptual questions with detailed explanation feedback for every section.',
+    capability: 'Client-side automated grading with mastery scoring.',
+  },
+  {
+    id: 'lab',
+    name: 'Practical Lab Agent',
+    role: 'Hands-on Projects',
+    icon: Terminal,
+    accent: 'from-purple-500 to-pink-600',
+    description: 'Creates real-world engineering missions, difficulty tags, milestone checklists, and evaluation rubrics.',
+    capability: 'Applied implementation tasks for active skill building.',
+  },
+  {
+    id: 'resource',
+    name: 'Resource Curator Agent',
+    role: 'References & Docs',
+    icon: Compass,
+    accent: 'from-rose-500 to-orange-600',
+    description: 'Curates external official documentation, cheat sheets, and deep-dive technical articles.',
+    capability: 'Expands concept mastery beyond the video stream.',
+  },
+  {
+    id: 'tutor',
+    name: 'RAG AI Tutor Agent',
+    role: 'Conversational Companion',
+    icon: Bot,
+    accent: 'from-amber-400 to-emerald-500',
+    description: 'Retrieves relevant transcript chunks to answer questions with exact [MM:SS] clickable video timestamp links.',
+    capability: 'Context-grounded multi-turn conversational RAG.',
+  },
+];
 
 const AIAgents = () => {
-    const agents = [
-    {
-        icon: Target,
-        title: "Curriculum Agent",
-        description: "Creates the course structure and organizes content into logical modules.",
-        role: "Structure Expert"
-    },
-    {
-        icon: FileText,
-        title: "Content Agent",
-        description: "Organizes and summarizes content, extracting key concepts and takeaways.",
-        role: "Content Specialist"
-    },
-    {
-        icon: CheckCircle,
-        title: "Quiz Agent",
-        description: "Generates assessments and quizzes to reinforce learning and test understanding.",
-        role: "Assessment Creator"
-    },
-    {
-        icon: Edit3,
-        title: "Assignment Agent",
-        description: "Creates practical exercises and hands-on tasks to apply learned concepts.",
-        role: "Practice Designer"
-    },
-    {
-        icon: BookOpen,
-        title: "Resource Agent",
-        description: "Recommends additional learning materials and supplementary resources.",
-        role: "Resource Curator"
-    },
-    {
-        icon: HelpCircle,
-        title: "AI Tutor Agent",
-        description: "Provides personalized guidance and answers questions with course-aware explanations.",
-        role: "Learning Companion"
-    }
-    ];
+  const [activeAgent, setActiveAgent] = useState(agents[0]);
 
-    return (
-        <section id="ai-agents" className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
-            <div className="inline-flex items-center px-4 py-2 bg-yellow-900/20 border border-yellow-800 rounded-full text-yellow-400 text-sm font-medium mb-4">
-                <Users className="mr-2" size={16} />
-                AI Team
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-bold text-white">
-                Powered by Specialized AI Agents
-            </h2>
-            <p className="mt-4 text-lg text-gray-400 max-w-3xl mx-auto">
-                Behind every generated course is a team of AI agents working together to create the perfect learning experience.
-            </p>
-            </div>
-
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {agents.map((agent, index) => (
-                <div
-                key={index}
-                className="bg-gray-900/50 border border-yellow-800/30 rounded-2xl p-8 hover:border-yellow-600 transition-colors group cursor-pointer"
-                >
-                <div className="w-16 h-16 bg-gradient-to-r from-yellow-500 to-yellow-700 rounded-2xl flex items-center justify-center mb-6">
-                    <agent.icon className="text-black text-2xl" />
-                </div>
-                <h3 className="text-xl font-bold text-white mb-2">{agent.title}</h3>
-                <p className="text-gray-400 mb-4">{agent.description}</p>
-                <div className="text-sm text-yellow-400 font-medium">
-                    {agent.role}
-                </div>
-                </div>
-            ))}
-            </div>
-
-            <div className="mt-12 text-center">
-            <p className="text-lg text-gray-400">
-                Together, they transform raw video content into a complete learning environment.
-            </p>
-            </div>
+  return (
+    <section id="ai-agents" className="py-20 lg:py-28 relative">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+        <div className="text-center space-y-3 max-w-3xl mx-auto">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-[var(--color-accent,#f59e0b)]">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Autonomous Intelligence</span>
+          </div>
+          <h2 className="text-3xl sm:text-5xl font-extrabold text-[var(--text-primary,#ffffff)] tracking-tight">
+            Decoupled Multi-Agent Architecture
+          </h2>
+          <p className="text-sm sm:text-base text-[var(--text-secondary,#a1a1aa)]">
+            Each course is synthesized by a team of autonomous AI agents orchestrated through LangChain, Groq Llama 3.3 70B, and Gemini Flash.
+          </p>
         </div>
-        </section>
-    );
+
+        {/* Agent Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {agents.map((agent) => {
+            const isSelected = activeAgent.id === agent.id;
+            return (
+              <div
+                key={agent.id}
+                onClick={() => setActiveAgent(agent)}
+                className={`p-7 rounded-3xl border transition-all duration-300 cursor-pointer flex flex-col justify-between group ${
+                  isSelected
+                    ? 'bg-zinc-900/90 border-amber-500/50 shadow-2xl scale-[1.02]'
+                    : 'bg-zinc-950/70 border-zinc-900 hover:border-zinc-800 hover:bg-zinc-900/40'
+                }`}
+              >
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div
+                      className={`w-12 h-12 rounded-2xl bg-gradient-to-r ${agent.accent} flex items-center justify-center text-black shadow-lg`}
+                    >
+                      <agent.icon className="w-6 h-6" />
+                    </div>
+                    <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-400">
+                      {agent.role}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="text-base font-bold text-white group-hover:text-amber-400 transition-colors">
+                      {agent.name}
+                    </h3>
+                    <p className="text-xs text-zinc-400 mt-2 leading-relaxed font-normal">
+                      {agent.description}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between text-[11px] text-zinc-500">
+                  <span className="truncate pr-2">{agent.capability}</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-zinc-600 group-hover:text-amber-400 group-hover:translate-x-1 transition-all shrink-0" />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
 };
 
 export default AIAgents;
