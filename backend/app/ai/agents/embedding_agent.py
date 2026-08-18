@@ -1,17 +1,13 @@
 import os
 import re
+import math
+import logging
 from typing import List, Dict, Any, Optional
+from collections import Counter
 
-import chromadb
-from chromadb.config import Settings
-from sentence_transformers import SentenceTransformer
+from app.core.config import settings
 
-
-_MODEL_NAME = "BAAI/bge-small-en-v1.5"
-_QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
-
-_model: Optional[SentenceTransformer] = None
-_chroma_client: Optional[chromadb.PersistentClient] = None
+logger = logging.getLogger(__name__)
 
 _DB_PATH = os.path.join(
     os.path.dirname(__file__),
@@ -21,50 +17,91 @@ _DB_PATH = os.path.join(
     "chroma_db",
 )
 
-
-def _get_model() -> SentenceTransformer:
-    global _model
-
-    if _model is None:
-        print(f"[EMBED] Loading {_MODEL_NAME}...")
-        _model = SentenceTransformer(_MODEL_NAME)
-        print("[EMBED] Model loaded.")
-
-    return _model
+_chroma_client = None
+_embedding_model = None
+_in_memory_store: Dict[int, Dict[str, Any]] = {}
 
 
-def _get_chroma_client() -> chromadb.PersistentClient:
+def _get_embedding_model():
+    global _embedding_model
+    if _embedding_model is None and settings.GOOGLE_API_KEY:
+        try:
+            from langchain_google_genai import GoogleGenerativeAIEmbeddings
+            _embedding_model = GoogleGenerativeAIEmbeddings(
+                model="models/text-embedding-004",
+                google_api_key=settings.GOOGLE_API_KEY,
+            )
+            logger.info("[EMBED] Loaded Google Gemini Embeddings (text-embedding-004)")
+        except Exception as e:
+            logger.warning(f"[EMBED] Could not load GoogleGenerativeAIEmbeddings: {e}")
+            _embedding_model = None
+    return _embedding_model
+
+
+def _get_chroma_client():
     global _chroma_client
-
     if _chroma_client is None:
-        _chroma_client = chromadb.PersistentClient(
-            path=_DB_PATH,
-            settings=Settings(anonymized_telemetry=False),
-        )
-
+        try:
+            import chromadb
+            from chromadb.config import Settings
+            _chroma_client = chromadb.PersistentClient(
+                path=_DB_PATH,
+                settings=Settings(anonymized_telemetry=False),
+            )
+        except Exception as e:
+            logger.warning(f"[CHROMA] ChromaDB client unavailable, using in-memory store: {e}")
+            _chroma_client = None
     return _chroma_client
 
 
 def _get_collection(course_id: int):
-    return _get_chroma_client().get_or_create_collection(
-        name=f"course_{course_id}",
-        metadata={"hnsw:space": "cosine"},
-    )
+    client = _get_chroma_client()
+    if client:
+        try:
+            return client.get_or_create_collection(
+                name=f"course_{course_id}",
+                metadata={"hnsw:space": "cosine"},
+            )
+        except Exception as e:
+            logger.warning(f"[CHROMA] Failed to get/create collection course_{course_id}: {e}")
+    return None
+
+
+def _simple_tf_embed(texts: List[str], dim: int = 128) -> List[List[float]]:
+    """Ultra-lightweight hash-based vectorizer using 0MB RAM."""
+    vectors = []
+    for text in texts:
+        tokens = re.findall(r'\w+', text.lower())
+        vec = [0.0] * dim
+        if not tokens:
+            vectors.append(vec)
+            continue
+        counts = Counter(tokens)
+        for token, count in counts.items():
+            idx = abs(hash(token)) % dim
+            vec[idx] += float(count)
+        norm = math.sqrt(sum(x * x for x in vec))
+        if norm > 0:
+            vec = [x / norm for x in vec]
+        vectors.append(vec)
+    return vectors
 
 
 def _embed(texts: List[str], is_query: bool = False) -> List[List[float]]:
-    model = _get_model()
+    if not texts:
+        return []
 
-    if is_query:
-        texts = [_QUERY_PREFIX + text for text in texts]
+    model = _get_embedding_model()
+    if model:
+        try:
+            if is_query:
+                return [model.embed_query(t) for t in texts]
+            else:
+                return model.embed_documents(texts)
+        except Exception as e:
+            logger.warning(f"[EMBED API Error] Fallback to lightweight vectorizer: {e}")
 
-    vectors = model.encode(
-        texts,
-        convert_to_numpy=True,
-        show_progress_bar=False,
-    )
-
-    return vectors.tolist()
+    return _simple_tf_embed(texts)
 
 
 def _sentence_tokenize(text: str) -> List[str]:
@@ -177,6 +214,15 @@ def _extract_text(section: Dict[str, Any]) -> str:
     )
 
 
+def _cosine_similarity(v1: List[float], v2: List[float]) -> float:
+    dot = sum(a * b for a, b in zip(v1, v2))
+    norm1 = math.sqrt(sum(a * a for a in v1))
+    norm2 = math.sqrt(sum(b * b for b in v2))
+    if norm1 > 0 and norm2 > 0:
+        return dot / (norm1 * norm2)
+    return 0.0
+
+
 def embed_course(
     course_id: int,
     modules: List[Dict[str, Any]],
@@ -184,13 +230,13 @@ def embed_course(
 ) -> None:
     collection = _get_collection(course_id)
 
-    try:
-        existing = collection.get()
-
-        if existing.get("ids"):
-            collection.delete(ids=existing["ids"])
-    except Exception:
-        pass
+    if collection:
+        try:
+            existing = collection.get()
+            if existing.get("ids"):
+                collection.delete(ids=existing["ids"])
+        except Exception:
+            pass
 
     documents: List[str] = []
     metadatas: List[Dict[str, str]] = []
@@ -238,96 +284,99 @@ def embed_course(
                 ids.append(chunk_id)
 
     if not documents:
-        print(
-            f"[EMBED] No valid content found for course {course_id}."
-        )
+        logger.info(f"[EMBED] No valid content found for course {course_id}.")
         return
 
-    print(
-        f"[EMBED] Embedding {len(documents)} chunks "
-        f"for course {course_id}..."
-    )
-
+    logger.info(f"[EMBED] Embedding {len(documents)} chunks for course {course_id}...")
     embeddings = _embed(documents)
 
-    collection.add(
-        documents=documents,
-        embeddings=embeddings,
-        metadatas=metadatas,
-        ids=ids,
-    )
+    # Save to in-memory fallback store
+    _in_memory_store[course_id] = {
+        "documents": documents,
+        "embeddings": embeddings,
+        "metadatas": metadatas,
+        "ids": ids,
+    }
 
-    print(
-        f"[EMBED] Stored {len(documents)} chunks "
-        f"for course {course_id}."
-    )
+    # Save to ChromaDB if available
+    if collection:
+        try:
+            collection.add(
+                documents=documents,
+                embeddings=embeddings,
+                metadatas=metadatas,
+                ids=ids,
+            )
+            logger.info(f"[EMBED] Stored {len(documents)} chunks in ChromaDB for course {course_id}.")
+        except Exception as e:
+            logger.warning(f"[EMBED] Failed to store in ChromaDB (using in-memory fallback): {e}")
 
 
 def retrieve(
     course_id: int,
     question: str,
     top_k: int = 5,
-    score_threshold: float = 0.35,
+    score_threshold: float = 0.25,
 ) -> List[Dict[str, Any]]:
+    query_embeddings = _embed([question], is_query=True)
+    if not query_embeddings:
+        return []
+    query_embedding = query_embeddings[0]
+
     collection = _get_collection(course_id)
 
-    if collection.count() == 0:
+    # Try ChromaDB query first
+    if collection:
+        try:
+            if collection.count() > 0:
+                results = collection.query(
+                    query_embeddings=[query_embedding],
+                    n_results=min(top_k, collection.count()),
+                    include=["documents", "metadatas", "distances"],
+                )
+                documents = results["documents"][0]
+                metadatas = results["metadatas"][0]
+                distances = results["distances"][0]
+
+                retrieved_chunks: List[Dict[str, Any]] = []
+                for document, metadata, distance in zip(documents, metadatas, distances):
+                    similarity = 1.0 - (distance / 2.0)
+                    if similarity < score_threshold:
+                        continue
+                    retrieved_chunks.append({
+                        "text": document,
+                        "metadata": metadata,
+                        "score": round(similarity, 3),
+                    })
+                return retrieved_chunks
+        except Exception as e:
+            logger.warning(f"[RETRIEVE] ChromaDB query failed (using in-memory store): {e}")
+
+    # Fallback to in-memory store
+    store = _in_memory_store.get(course_id)
+    if not store or not store.get("documents"):
         return []
 
-    query_embedding = _embed(
-        [question],
-        is_query=True,
-    )[0]
+    scored_items = []
+    for doc, meta, emb in zip(store["documents"], store["metadatas"], store["embeddings"]):
+        sim = _cosine_similarity(query_embedding, emb)
+        if sim >= score_threshold:
+            scored_items.append({
+                "text": doc,
+                "metadata": meta,
+                "score": round(sim, 3),
+            })
 
-    results = collection.query(
-        query_embeddings=[query_embedding],
-        n_results=min(top_k, collection.count()),
-        include=[
-            "documents",
-            "metadatas",
-            "distances",
-        ],
-    )
-
-    documents = results["documents"][0]
-    metadatas = results["metadatas"][0]
-    distances = results["distances"][0]
-
-    retrieved_chunks: List[Dict[str, Any]] = []
-
-    for document, metadata, distance in zip(
-        documents,
-        metadatas,
-        distances,
-    ):
-        similarity = 1.0 - (distance / 2.0)
-
-        if similarity < score_threshold:
-            continue
-
-        retrieved_chunks.append(
-            {
-                "text": document,
-                "metadata": metadata,
-                "score": round(similarity, 3),
-            }
-        )
-
-    return retrieved_chunks
+    scored_items.sort(key=lambda x: x["score"], reverse=True)
+    return scored_items[:top_k]
 
 
 def delete_course_embeddings(course_id: int) -> None:
-    try:
-        _get_chroma_client().delete_collection(
-            f"course_{course_id}"
-        )
-
-        print(
-            f"[EMBED] Deleted embeddings "
-            f"for course {course_id}."
-        )
-
-    except Exception as error:
-        print(
-            f"[EMBED] Failed to delete embeddings: {error}"
-        )
+    _in_memory_store.pop(course_id, None)
+    client = _get_chroma_client()
+    if client:
+        try:
+            client.delete_collection(f"course_{course_id}")
+            logger.info(f"[EMBED] Deleted embeddings for course {course_id}.")
+        except Exception as error:
+            logger.warning(f"[EMBED] Failed to delete Chroma collection: {error}")
