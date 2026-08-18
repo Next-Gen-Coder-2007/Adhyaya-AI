@@ -1,0 +1,54 @@
+services:
+  # 1. FastAPI Python Backend Service
+  - type: web
+    name: adhyaya-ai-backend
+    runtime: python
+    rootDir: backend
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python run.py
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: adhyaya-ai-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALGORITHM
+        value: HS256
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        value: "*"
+
+  # 2. React + Vite Frontend Static Site (Free)
+  - type: web
+    name: adhyaya-ai-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        sync: false
+      - key: VITE_GOOGLE_CLIENT_ID
+        sync: false
+      - key: VITE_YOUTUBE_API_KEY
+        sync: false
+
+databases:
+  - name: adhyaya-ai-db
+    region: oregon
+    plan: free
