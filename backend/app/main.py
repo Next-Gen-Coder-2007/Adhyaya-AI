@@ -17,8 +17,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger("adhyaya.api")
 
-# Auto-create table schemas on boot
-Base.metadata.create_all(bind=engine)
+# Auto-create table schemas on boot with error handling
+try:
+    Base.metadata.create_all(bind=engine)
+    logger.info("Database tables verified/created successfully.")
+except Exception as e:
+    logger.error(f"Could not connect to database on startup: {e}. Please verify DATABASE_URL.")
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
