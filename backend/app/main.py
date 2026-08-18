@@ -43,9 +43,13 @@ async def add_process_time_header(request: Request, call_next):
 
 
 # Dynamic Cloud CORS Configuration
+cors_origins = settings.ALLOWED_ORIGINS
+allow_all = "*" in cors_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS if "*" not in settings.ALLOWED_ORIGINS else ["*"],
+    allow_origins=cors_origins if not allow_all else [],
+    allow_origin_regex=r"^https?:\/\/.*" if allow_all else None,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -26,6 +26,12 @@ class Settings:
     YOUTUBE_API_KEY: str = os.getenv("YOUTUBE_API_KEY", "")
     GOOGLE_URL: str = os.getenv("GOOGLE_URL", "https://www.googleapis.com/oauth2/v3/userinfo")
 
+    # Vector DB (ChromaDB)
+    CHROMA_HOST: str = os.getenv("CHROMA_HOST", "")
+    CHROMA_PORT: int = int(os.getenv("CHROMA_PORT", "443" if os.getenv("CHROMA_SSL", "false").lower() == "true" else "8000"))
+    CHROMA_SSL: bool = os.getenv("CHROMA_SSL", "false").lower() in ("true", "1")
+    CHROMA_AUTH_TOKEN: str = os.getenv("CHROMA_AUTH_TOKEN", "")
+
     # CORS
     @property
     def ALLOWED_ORIGINS(self) -> List[str]:

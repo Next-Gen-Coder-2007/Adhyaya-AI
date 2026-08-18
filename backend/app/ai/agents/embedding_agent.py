@@ -44,10 +44,28 @@ def _get_chroma_client():
         try:
             import chromadb
             from chromadb.config import Settings
-            _chroma_client = chromadb.PersistentClient(
-                path=_DB_PATH,
-                settings=Settings(anonymized_telemetry=False),
-            )
+
+            # 1. Remote Hosted ChromaDB (Railway / Render / Cloud)
+            if getattr(settings, "CHROMA_HOST", None):
+                headers = {}
+                if getattr(settings, "CHROMA_AUTH_TOKEN", None):
+                    headers["X-Chroma-Token"] = settings.CHROMA_AUTH_TOKEN
+
+                logger.info(f"[CHROMA] Connecting to remote ChromaDB at {settings.CHROMA_HOST}:{settings.CHROMA_PORT} (ssl={settings.CHROMA_SSL})")
+                _chroma_client = chromadb.HttpClient(
+                    host=settings.CHROMA_HOST,
+                    port=settings.CHROMA_PORT,
+                    ssl=settings.CHROMA_SSL,
+                    headers=headers if headers else None,
+                    settings=Settings(anonymized_telemetry=False),
+                )
+            # 2. Local Persistent File-based ChromaDB
+            else:
+                logger.info(f"[CHROMA] Connecting to local persistent ChromaDB at {_DB_PATH}")
+                _chroma_client = chromadb.PersistentClient(
+                    path=_DB_PATH,
+                    settings=Settings(anonymized_telemetry=False),
+                )
         except Exception as e:
             logger.warning(f"[CHROMA] ChromaDB client unavailable, using in-memory store: {e}")
             _chroma_client = None
