@@ -1,29 +1,33 @@
 import mongoose from 'mongoose';
 import { env } from './env.js';
 
-let isConnected = false;
+let cachedPromise = null;
 
 export async function connectDB() {
-  if (isConnected) {
-    return;
+  if (mongoose.connection.readyState === 1) {
+    return mongoose.connection;
   }
 
-  try {
-    await mongoose.connect(env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000,
-    });
-    isConnected = true;
-  } catch {
-    // disconnected fallback
+  if (mongoose.connection.readyState === 2 && cachedPromise) {
+    return cachedPromise;
   }
 
-  mongoose.connection.on('disconnected', () => {
-    isConnected = false;
-  });
+  if (!cachedPromise) {
+    cachedPromise = mongoose
+      .connect(env.MONGODB_URI, {
+        serverSelectionTimeoutMS: 5000,
+      })
+      .then((m) => {
+        return m;
+      })
+      .catch((err) => {
+        cachedPromise = null;
+        console.error('[MongoDB Connection Error]', err.message);
+        throw err;
+      });
+  }
 
-  mongoose.connection.on('reconnected', () => {
-    isConnected = true;
-  });
+  return cachedPromise;
 }
 
 export function getDBStatus() {

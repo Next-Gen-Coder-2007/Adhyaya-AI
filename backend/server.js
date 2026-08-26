@@ -24,49 +24,62 @@ app.use((req, res, next) => {
   next();
 });
 
-// Dynamic CORS Configuration supporting CLIENT_URL and Vercel cloud deployments
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
-      if (!origin) return callback(null, true);
+// Dynamic CORS Configuration supporting CLIENT_URL, Vercel, and Render deployments
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
+    if (!origin) return callback(null, true);
 
-      // Check allowed origins list
-      if (
-        env.ALLOWED_ORIGINS.includes('*') ||
-        env.ALLOWED_ORIGINS.includes(origin) ||
-        origin.endsWith('.vercel.app')
-      ) {
-        return callback(null, true);
-      }
-
-      // Check configured CLIENT_URL
-      try {
-        if (env.CLIENT_URL) {
-          const clientHost = new URL(
-            env.CLIENT_URL.startsWith('http') ? env.CLIENT_URL : `https://${env.CLIENT_URL}`
-          ).origin;
-          if (clientHost === origin) {
-            return callback(null, true);
-          }
-        }
-      } catch {
-        // ignore url parse error
-      }
-
-      // Cloud permissive fallback
+    // Check allowed origins list or any vercel.app / localhost / onrender.com origin
+    if (
+      env.ALLOWED_ORIGINS.includes('*') ||
+      env.ALLOWED_ORIGINS.includes(origin) ||
+      origin.endsWith('.vercel.app') ||
+      origin.endsWith('.onrender.com')
+    ) {
       return callback(null, true);
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-  })
-);
+    }
+
+    // Check configured CLIENT_URL
+    try {
+      if (env.CLIENT_URL) {
+        const clientHost = new URL(
+          env.CLIENT_URL.startsWith('http') ? env.CLIENT_URL : `https://${env.CLIENT_URL}`
+        ).origin;
+        if (clientHost === origin) {
+          return callback(null, true);
+        }
+      }
+    } catch {
+      // ignore url parse error
+    }
+
+    // Cloud permissive fallback
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  maxAge: 86400,
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // Standard Body & Cookie Parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
+
+// Serverless / Async DB Connection Middleware
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+  } catch (err) {
+    // DB connect failure handled gracefully by routes/errorHandler
+  }
+  next();
+});
 
 // Mount API Routes
 app.use('/', healthRoutes);
