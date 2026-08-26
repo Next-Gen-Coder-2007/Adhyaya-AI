@@ -1,11 +1,11 @@
-import { Eye, EyeOff, Mail, Lock, User, AlertCircle, Sparkles, Sun, Moon } from 'lucide-react';
+import { useState } from 'react';
+import { Eye, EyeOff, Mail, Lock, User, AlertCircle, X, Sun, Moon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
 import logo from '../assets/logo.png';
-import api from '../api/axios';
+import api, { getFriendlyErrorMessage } from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { useState } from 'react';
 
 const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -25,7 +25,7 @@ const Register = () => {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError('');
+    if (error) setError('');
   };
 
   const handleSubmit = async (e) => {
@@ -33,14 +33,23 @@ const Register = () => {
     setError('');
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      toast.warning('Passwords do not match. Please recheck.', 'Validation Error');
+      const msg = 'Passwords do not match. Please re-enter your password.';
+      setError(msg);
+      toast.warning(msg, 'Validation Error');
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      const msg = 'Password must be at least 6 characters long.';
+      setError(msg);
+      toast.warning(msg, 'Weak Password');
       return;
     }
 
     if (!termsAccepted) {
-      setError('Please accept terms & conditions');
-      toast.warning('Please accept the Terms of Service to continue.', 'Terms Required');
+      const msg = 'Please accept the Terms of Service and Privacy Policy to continue.';
+      setError(msg);
+      toast.warning(msg, 'Terms Required');
       return;
     }
 
@@ -54,9 +63,13 @@ const Register = () => {
       toast.success('Account created successfully! Please sign in.', 'Account Created');
       navigate('/login');
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Registration failed. Please try again.';
-      setError(msg);
-      toast.error(msg, 'Registration Failed');
+      console.error('[Adhyaya Register Error]', {
+        message: err.message,
+        status: err.response?.status,
+        detail: err.response?.data?.detail,
+      });
+      const friendlyMsg = getFriendlyErrorMessage(err, 'Registration failed. Please try again.');
+      setError(friendlyMsg);
     } finally {
       setLoading(false);
     }
@@ -65,17 +78,23 @@ const Register = () => {
   const login = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       setError('');
+      setLoading(true);
       try {
         await loginAuth('/auth/google', {
           access_token: tokenResponse.access_token,
         });
+        toast.success('Account created with Google!', 'Welcome');
         navigate('/dashboard');
       } catch (err) {
-        setError(err.response?.data?.error || 'Google registration failed. Please try again.');
+        console.error('[Adhyaya Google Register Error]', err);
+        setError(getFriendlyErrorMessage(err, 'Google registration failed. Please try again.'));
+      } finally {
+        setLoading(false);
       }
     },
-    onError: () => {
-      setError('Google registration failed. Please try again.');
+    onError: (err) => {
+      console.error('[Google OAuth Popup Error]', err);
+      setError('Google sign-up popup was closed or failed. Please try again.');
     },
   });
 
@@ -114,9 +133,22 @@ const Register = () => {
         {/* Card Box */}
         <div className="p-6 sm:p-8 rounded-3xl bg-zinc-950/85 border border-zinc-900 shadow-2xl backdrop-blur-xl space-y-6">
           {error && (
-            <div className="flex items-start gap-3 bg-red-950/50 border border-red-800/60 rounded-2xl p-3.5 text-xs text-red-400">
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>{error}</span>
+            <div className="relative flex items-start gap-3 bg-red-500/10 border border-red-500/30 rounded-2xl p-4 text-xs text-red-200 backdrop-blur-md shadow-lg shadow-red-950/30 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="p-1 rounded-lg bg-red-500/20 text-red-400 shrink-0">
+                <AlertCircle className="w-4 h-4" />
+              </div>
+              <div className="flex-1 pr-4">
+                <h5 className="font-bold uppercase tracking-wider text-[11px] text-red-300 mb-0.5">Registration Error</h5>
+                <p className="leading-relaxed font-normal text-zinc-200">{error}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setError('')}
+                className="text-zinc-400 hover:text-white p-1 rounded-md transition-colors shrink-0 cursor-pointer"
+                title="Dismiss"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
             </div>
           )}
 

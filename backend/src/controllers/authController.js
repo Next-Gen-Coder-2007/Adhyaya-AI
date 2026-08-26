@@ -23,12 +23,12 @@ export async function register(req, res) {
     const { name, email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ detail: 'Email and password are required' });
+      return res.status(400).json({ detail: 'Email and password are required.' });
     }
 
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
-      return res.status(400).json({ detail: 'User already exists' });
+      return res.status(409).json({ detail: 'An account with this email already exists.' });
     }
 
     const hashedPassword = await User.hashPassword(password);
@@ -40,10 +40,15 @@ export async function register(req, res) {
     });
 
     await user.save();
-    return res.status(200).json({ message: 'Registered successfully' });
+    return res.status(201).json({ message: 'Registered successfully.' });
   } catch (err) {
-    console.error('[REGISTER ERROR]', err);
-    return res.status(500).json({ detail: err.message || 'Internal Server Error' });
+    console.error('[AUTH:REGISTER ERROR]', { message: err.message, stack: err.stack });
+    if (err.name === 'MongooseError' || err.message?.includes('buffering timed out')) {
+      return res.status(503).json({
+        detail: 'Database connection timed out. Please verify MongoDB Atlas IP whitelist (0.0.0.0/0) and environment variables.',
+      });
+    }
+    return res.status(500).json({ detail: err.message || 'Registration failed due to a server error.' });
   }
 }
 
@@ -52,17 +57,17 @@ export async function login(req, res) {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ detail: 'Email and password are required' });
+      return res.status(400).json({ detail: 'Email and password are required.' });
     }
 
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
-      return res.status(404).json({ detail: 'User Not Found' });
+      return res.status(401).json({ detail: 'Invalid email or password.' });
     }
 
     const isValid = await user.comparePassword(password);
     if (!isValid) {
-      return res.status(401).json({ detail: 'Invalid Credentials' });
+      return res.status(401).json({ detail: 'Invalid email or password.' });
     }
 
     const token = createToken({ sub: user.email });
@@ -70,8 +75,13 @@ export async function login(req, res) {
 
     return res.status(200).json({ message: 'Login success', token, user: user.toJSON() });
   } catch (err) {
-    console.error('[LOGIN ERROR]', err);
-    return res.status(500).json({ detail: err.message || 'Internal Server Error' });
+    console.error('[AUTH:LOGIN ERROR]', { message: err.message, stack: err.stack });
+    if (err.name === 'MongooseError' || err.message?.includes('buffering timed out')) {
+      return res.status(503).json({
+        detail: 'Database connection timed out. Please verify MongoDB Atlas IP whitelist (0.0.0.0/0) and environment variables.',
+      });
+    }
+    return res.status(500).json({ detail: err.message || 'Login failed due to a server error.' });
   }
 }
 
@@ -79,7 +89,7 @@ export async function googleLogin(req, res) {
   try {
     const { access_token } = req.body;
     if (!access_token) {
-      return res.status(400).json({ detail: 'Google access token is required' });
+      return res.status(400).json({ detail: 'Google access token is required.' });
     }
 
     const googleRes = await fetch(env.GOOGLE_URL, {
@@ -109,8 +119,13 @@ export async function googleLogin(req, res) {
 
     return res.status(200).json({ message: 'Google login success', token, user: user.toJSON() });
   } catch (err) {
-    console.error('[GOOGLE LOGIN ERROR]', err);
-    return res.status(500).json({ detail: err.message || 'Google OAuth failed' });
+    console.error('[AUTH:GOOGLE ERROR]', { message: err.message, stack: err.stack });
+    if (err.name === 'MongooseError' || err.message?.includes('buffering timed out')) {
+      return res.status(503).json({
+        detail: 'Database connection timed out. Please verify MongoDB Atlas IP whitelist (0.0.0.0/0).',
+      });
+    }
+    return res.status(500).json({ detail: err.message || 'Google authentication failed.' });
   }
 }
 

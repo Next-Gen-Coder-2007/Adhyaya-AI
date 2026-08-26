@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock, AlertCircle, Sparkles, Sun, Moon } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, AlertCircle, X, Sun, Moon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
 import logo from '../assets/logo.png';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { getFriendlyErrorMessage } from '../api/axios';
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -17,7 +18,7 @@ const Login = () => {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError('');
+    if (error) setError('');
   };
 
   const handleSubmit = async (e) => {
@@ -29,9 +30,13 @@ const Login = () => {
       toast.success('Welcome back to Adhyaya AI!', 'Signed In');
       navigate('/dashboard');
     } catch (err) {
-      const msg = err.response?.data?.error || err.response?.data?.detail || 'Invalid email or password. Please try again.';
-      setError(msg);
-      toast.error(msg, 'Authentication Failed');
+      console.error('[Adhyaya Login Error]', {
+        message: err.message,
+        status: err.response?.status,
+        detail: err.response?.data?.detail,
+      });
+      const friendlyMsg = getFriendlyErrorMessage(err, 'Invalid email or password. Please try again.');
+      setError(friendlyMsg);
     } finally {
       setLoading(false);
     }
@@ -40,17 +45,23 @@ const Login = () => {
   const login = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       setError('');
+      setLoading(true);
       try {
         await loginAuth('/auth/google', {
           access_token: tokenResponse.access_token,
         });
+        toast.success('Google authentication successful!', 'Welcome');
         navigate('/dashboard');
       } catch (err) {
-        setError(err.response?.data?.error || 'Google login failed. Please try again.');
+        console.error('[Adhyaya Google Auth Error]', err);
+        setError(getFriendlyErrorMessage(err, 'Google login failed. Please try again.'));
+      } finally {
+        setLoading(false);
       }
     },
-    onError: () => {
-      setError('Google login failed. Please try again.');
+    onError: (err) => {
+      console.error('[Google OAuth Popup Error]', err);
+      setError('Google login popup was closed or failed. Please try again.');
     },
   });
 
@@ -89,9 +100,22 @@ const Login = () => {
         {/* Card Box */}
         <div className="p-6 sm:p-8 rounded-3xl bg-zinc-950/85 border border-zinc-900 shadow-2xl backdrop-blur-xl space-y-6">
           {error && (
-            <div className="flex items-start gap-3 bg-red-950/50 border border-red-800/60 rounded-2xl p-3.5 text-xs text-red-400">
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>{error}</span>
+            <div className="relative flex items-start gap-3 bg-red-500/10 border border-red-500/30 rounded-2xl p-4 text-xs text-red-200 backdrop-blur-md shadow-lg shadow-red-950/30 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="p-1 rounded-lg bg-red-500/20 text-red-400 shrink-0">
+                <AlertCircle className="w-4 h-4" />
+              </div>
+              <div className="flex-1 pr-4">
+                <h5 className="font-bold uppercase tracking-wider text-[11px] text-red-300 mb-0.5">Authentication Error</h5>
+                <p className="leading-relaxed font-normal text-zinc-200">{error}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setError('')}
+                className="text-zinc-400 hover:text-white p-1 rounded-md transition-colors shrink-0 cursor-pointer"
+                title="Dismiss"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
             </div>
           )}
 
