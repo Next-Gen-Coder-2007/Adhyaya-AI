@@ -1,38 +1,8 @@
 import { useState, useEffect } from 'react';
-import { X, Sparkles, Film, Play, Check, AlertCircle, Loader2 } from 'lucide-react';
+import { X, Sparkles, Film, AlertCircle, Loader2 } from 'lucide-react';
 import axios from 'axios';
 import api from '../../api/axios';
-
-const STARTER_PRESETS = [
-  {
-    label: 'React in 100s',
-    title: 'React in 100 Seconds',
-    url: 'https://www.youtube.com/watch?v=Tn6-PIqc4UM',
-    description: 'Learn React fundamentals, JSX, components, and virtual DOM in record time.',
-    thumbnail: 'https://img.youtube.com/vi/Tn6-PIqc4UM/hqdefault.jpg'
-  },
-  {
-    label: 'Python Crash Course',
-    title: 'Python in 100 Seconds',
-    url: 'https://www.youtube.com/watch?v=x7X9w_GIm1s',
-    description: 'A rapid overview of Python language syntax, features, and ecosystem.',
-    thumbnail: 'https://img.youtube.com/vi/x7X9w_GIm1s/hqdefault.jpg'
-  },
-  {
-    label: 'Neural Networks 101',
-    title: 'Neural Networks in 100 Seconds',
-    url: 'https://www.youtube.com/watch?v=aircAruvnKk',
-    description: 'Understand deep learning nodes, weights, biases, and backpropagation.',
-    thumbnail: 'https://img.youtube.com/vi/aircAruvnKk/hqdefault.jpg'
-  },
-  {
-    label: 'Git & GitHub',
-    title: 'Git in 100 Seconds',
-    url: 'https://www.youtube.com/watch?v=hwP7mwU4ycQ',
-    description: 'Master version control, branches, staging, commits, and pull requests.',
-    thumbnail: 'https://img.youtube.com/vi/hwP7mwU4ycQ/hqdefault.jpg'
-  },
-];
+import { useToast } from '../../context/ToastContext';
 
 const CreateCourseModal = ({ isOpen, onClose, fetchCourses }) => {
   const [ytLink, setYtLink] = useState('');
@@ -43,6 +13,8 @@ const CreateCourseModal = ({ isOpen, onClose, fetchCourses }) => {
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!isOpen) {
@@ -83,7 +55,7 @@ const CreateCourseModal = ({ isOpen, onClose, fetchCourses }) => {
               isPlaylist: false,
             };
           }
-        } catch (e) {
+        } catch {
           // fallback gracefully
         }
       }
@@ -110,7 +82,7 @@ const CreateCourseModal = ({ isOpen, onClose, fetchCourses }) => {
             description: item?.snippet?.description || 'Curated series of lectures and modules.',
             isPlaylist: true,
           };
-        } catch (e) {
+        } catch {
           // fallback
         }
       }
@@ -160,17 +132,12 @@ const CreateCourseModal = ({ isOpen, onClose, fetchCourses }) => {
     };
   }, [ytLink]);
 
-  const handleSelectPreset = (preset) => {
-    setYtLink(preset.url);
-    setTitle(preset.title);
-    setDescription(preset.description);
-    setThumbnailUrl(preset.thumbnail);
-    setIsPlaylist(false);
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!ytLink) return;
+    if (!ytLink) {
+      toast.warning('Please enter a YouTube video or playlist URL.');
+      return;
+    }
 
     setSubmitting(true);
     setError(null);
@@ -187,11 +154,14 @@ const CreateCourseModal = ({ isOpen, onClose, fetchCourses }) => {
       };
 
       await api.post('/courses', courseData);
+      toast.success('Course generation started! AI agents are building your curriculum.', 'Course Queued');
       if (fetchCourses) await fetchCourses();
       onClose();
     } catch (err) {
       console.error('Error generating course:', err);
-      setError(err.response?.data?.detail || 'Failed to initialize course generation. Please try again.');
+      const msg = err.response?.data?.detail || 'Failed to initialize course generation. Please try again.';
+      setError(msg);
+      toast.error(msg, 'Generation Failed');
     } finally {
       setSubmitting(false);
     }
@@ -200,49 +170,26 @@ const CreateCourseModal = ({ isOpen, onClose, fetchCourses }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-xl p-6 sm:p-8 rounded-3xl bg-zinc-950 border border-zinc-800 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto scrollbar-thin">
+    <div className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4 animate-in fade-in duration-200">
+      <div className="w-full max-w-lg p-6 sm:p-8 rounded-3xl bg-[var(--bg-secondary,#121215)] border border-[var(--border,rgba(255,255,255,0.08))] shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto scrollbar-thin">
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-zinc-900 pb-4">
+        <div className="flex items-center justify-between border-b border-[var(--border,rgba(255,255,255,0.08))] pb-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">Generate AI Course</h2>
-              <p className="text-xs text-zinc-400">Transform any YouTube video or playlist into a full interactive course</p>
+              <h2 className="text-lg font-bold text-[var(--text-primary,#ffffff)]">Generate AI Course</h2>
+              <p className="text-xs text-[var(--text-muted,#71717a)]">Transform any YouTube video or playlist into an interactive course</p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors cursor-pointer"
+            className="p-2 rounded-xl text-[var(--text-muted,#71717a)] hover:text-[var(--text-primary,#ffffff)] hover:bg-white/5 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
-        </div>
-
-        {/* 1-Click Starter Presets */}
-        <div className="space-y-2">
-          <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
-            Quick Starters (One-Click Testing)
-          </label>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {STARTER_PRESETS.map((p, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => handleSelectPreset(p)}
-                className={`p-2.5 rounded-xl border text-xs text-left transition-all cursor-pointer ${ytLink === p.url
-                    ? 'bg-amber-500/20 border-amber-500 text-amber-300 font-bold'
-                    : 'bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'
-                  }`}
-              >
-                <span className="block font-semibold truncate">{p.label}</span>
-                <span className="text-[9px] text-zinc-500 block truncate">1-Click Load</span>
-              </button>
-            ))}
-          </div>
         </div>
 
         {error && (
@@ -255,7 +202,7 @@ const CreateCourseModal = ({ isOpen, onClose, fetchCourses }) => {
         {/* Course Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-zinc-300 flex items-center justify-between">
+            <label className="text-xs font-medium text-[var(--text-secondary,#a1a1aa)] flex items-center justify-between">
               <span>YouTube Video or Playlist URL</span>
               {loadingPreview && <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />}
             </label>
@@ -267,20 +214,20 @@ const CreateCourseModal = ({ isOpen, onClose, fetchCourses }) => {
                 value={ytLink}
                 onChange={(e) => setYtLink(e.target.value)}
                 placeholder="https://www.youtube.com/watch?v=..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 focus:border-amber-500 text-xs text-white placeholder-zinc-500 outline-none transition-colors"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-tertiary,#1c1c21)] border border-[var(--border,rgba(255,255,255,0.08))] focus:border-amber-500 text-xs text-[var(--text-primary,#ffffff)] placeholder-zinc-500 outline-none transition-colors"
               />
             </div>
           </div>
 
           {/* Live Preview Card */}
           {thumbnailUrl && (
-            <div className="p-3.5 rounded-2xl bg-zinc-900/40 border border-zinc-800 flex gap-4 items-center">
+            <div className="p-3.5 rounded-2xl bg-[var(--bg-tertiary,#1c1c21)] border border-[var(--border,rgba(255,255,255,0.08))] flex gap-4 items-center">
               <div className="w-28 aspect-video rounded-xl overflow-hidden bg-black shrink-0 relative">
                 <img src={thumbnailUrl} alt="Thumbnail preview" className="w-full h-full object-cover" />
               </div>
               <div className="min-w-0 flex-1 space-y-1">
-                <p className="text-xs font-bold text-white truncate">{title || 'Fetching details...'}</p>
-                <p className="text-[10px] text-zinc-500 line-clamp-2">{description || 'Ready to structure into modules.'}</p>
+                <p className="text-xs font-bold text-[var(--text-primary,#ffffff)] truncate">{title || 'Fetching details...'}</p>
+                <p className="text-[10px] text-[var(--text-muted,#71717a)] line-clamp-2">{description || 'Ready to structure into modules.'}</p>
                 {isPlaylist && (
                   <span className="inline-block text-[9px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 font-bold">
                     Playlist Track
@@ -291,13 +238,13 @@ const CreateCourseModal = ({ isOpen, onClose, fetchCourses }) => {
           )}
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-zinc-300">Custom Title (Optional)</label>
+            <label className="text-xs font-medium text-[var(--text-secondary,#a1a1aa)]">Custom Title (Optional)</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Modern Web Development with React"
-              className="w-full px-4 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 focus:border-amber-500 text-xs text-white placeholder-zinc-500 outline-none transition-colors"
+              className="w-full px-4 py-2.5 rounded-xl bg-[var(--bg-tertiary,#1c1c21)] border border-[var(--border,rgba(255,255,255,0.08))] focus:border-amber-500 text-xs text-[var(--text-primary,#ffffff)] placeholder-zinc-500 outline-none transition-colors"
             />
           </div>
 

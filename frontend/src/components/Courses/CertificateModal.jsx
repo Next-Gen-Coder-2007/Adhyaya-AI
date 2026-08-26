@@ -19,8 +19,8 @@ const CertificateModal = ({ isOpen, onClose, certData }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-3xl rounded-3xl bg-[var(--bg-secondary,#121215)] border border-amber-500/30 shadow-2xl p-6 sm:p-8 space-y-6 max-h-[95vh] overflow-y-auto scrollbar-thin">
+    <div className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4 animate-in fade-in duration-200">
+      <div className="w-full max-w-3xl rounded-3xl bg-[var(--bg-secondary,#080808)] border border-amber-500/30 shadow-2xl p-6 sm:p-8 space-y-6 max-h-[95vh] overflow-y-auto scrollbar-thin">
         {/* Header Actions */}
         <div className="flex items-center justify-between border-b border-[var(--border,rgba(255,255,255,0.08))] pb-4">
           <div className="flex items-center gap-2.5">

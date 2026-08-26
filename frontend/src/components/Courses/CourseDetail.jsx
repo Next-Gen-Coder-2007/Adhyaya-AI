@@ -34,6 +34,7 @@ import Navbar from '../../components/Dashboard/Navbar';
 import ChatPanel from './ChatPanel';
 import CustomYouTubePlayer from './CustomYoutubePlayer';
 import CertificateModal from './CertificateModal';
+import { useCourseProgress } from '../../hooks/useCourseProgress';
 
 const formatTime = (seconds) => {
   if (seconds === null || seconds === undefined || isNaN(seconds)) return null;
@@ -84,19 +85,20 @@ const getSectionTypeLabel = (type) => {
   }
 };
 
-const getYouTubeVideoId = (url) => {
-  if (!url) return null;
+const getYouTubeVideoId = (url, fallbackCourse) => {
+  const target = url || fallbackCourse?.video_url || fallbackCourse?.youtube_url || fallbackCourse?.videoUrl || fallbackCourse?.modules?.[0]?.video_url;
+  if (!target) return null;
   try {
-    if (url.includes('youtube.com/watch')) {
-      const urlObj = new URL(url);
+    const match = target.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
+    if (match && match[1]) return match[1];
+
+    if (target.includes('youtube.com/watch')) {
+      const urlObj = new URL(target.startsWith('http') ? target : `https://${target}`);
       return urlObj.searchParams.get('v') || null;
-    } else if (url.includes('youtu.be/')) {
-      return url.split('youtu.be/')[1]?.split('?')[0]?.split('&')[0] || null;
-    } else if (url.includes('youtube.com/embed/')) {
-      return url.split('youtube.com/embed/')[1]?.split('?')[0]?.split('&')[0] || null;
-    } else if (url.includes('youtube.com/')) {
-      const parts = url.split('youtube.com/')[1]?.split('?')[0]?.split('&')[0];
-      return parts?.length > 0 ? parts : null;
+    } else if (target.includes('youtu.be/')) {
+      return target.split('youtu.be/')[1]?.split('?')[0]?.split('&')[0] || null;
+    } else if (target.includes('youtube.com/embed/')) {
+      return target.split('youtube.com/embed/')[1]?.split('?')[0]?.split('&')[0] || null;
     }
     return null;
   } catch {
@@ -140,6 +142,7 @@ const CourseDetail = () => {
   const [isCertModalOpen, setIsCertModalOpen] = useState(false);
   const [loadingCert, setLoadingCert] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   const handleOpenCertificate = async () => {
     try {
@@ -154,9 +157,26 @@ const CourseDetail = () => {
     }
   };
 
-  const fetchCourse = async () => {
+  const handleRetryCourse = async () => {
     try {
-      setLoading(true);
+      setRetrying(true);
+      await api.post(`/courses/${id}/retry`);
+      await fetchCourse();
+    } catch (err) {
+      console.error('Failed to retry course:', err);
+    } finally {
+      setRetrying(false);
+    }
+  };
+
+  const { progress: genProgress, step: genStep } = useCourseProgress(
+    course?.status,
+    course?.created_at || course?.createdAt
+  );
+
+  const fetchCourse = async (silent = false) => {
+    try {
+      if (!silent) setLoading(true);
       setError(null);
       const response = await api.get(`/courses/${id}`);
       const courseData = response.data;
@@ -176,9 +196,9 @@ const CourseDetail = () => {
       }
     } catch (err) {
       console.error('Failed to fetch course:', err);
-      setError('Could not load course. Please check if the course exists.');
+      if (!silent) setError('Could not load course. Please check if the course exists.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -189,7 +209,9 @@ const CourseDetail = () => {
   useEffect(() => {
     let interval;
     if (course?.status === 'generating') {
-      interval = setInterval(fetchCourse, 4000);
+      interval = setInterval(() => {
+        fetchCourse(true);
+      }, 10000);
     }
     return () => clearInterval(interval);
   }, [course?.status]);
@@ -440,23 +462,150 @@ const CourseDetail = () => {
 
   // Generating Screen
   if (course.status === 'generating') {
+    const steps = [
+      { id: 1, label: 'Extract Video Captions & Timeline', min: 20 },
+      { id: 2, label: 'Map 10-Hour Timeline & Module Boundaries', min: 35 },
+      { id: 3, label: 'Synthesize Lessons, Quizzes & Labs', min: 88 },
+      { id: 4, label: 'Index Semantic Vectors for AI Tutor', min: 95 },
+    ];
+
     return (
       <Navbar>
-        <div className="flex flex-col items-center justify-center py-24 text-center max-w-lg mx-auto space-y-6">
-          <div className="relative p-6 rounded-3xl bg-zinc-900/50 border border-amber-500/30 shadow-2xl">
-            <Sparkles className="w-12 h-12 text-amber-500 animate-pulse mx-auto" />
-            <Loader2 className="w-6 h-6 animate-spin text-amber-400 mx-auto mt-4" />
-            <h2 className="text-2xl font-bold text-white mt-4">Synthesizing Course Curriculum</h2>
-            <p className="text-xs text-zinc-400 mt-2 max-w-md">
-              Our AI agents are breaking down the video transcripts, constructing module timelines, drafting section quizzes, and building the RAG tutor index...
-            </p>
+        <div className="flex flex-col items-center justify-center py-16 text-center max-w-xl mx-auto px-4 space-y-6">
+          <div className="w-full relative p-8 rounded-3xl bg-zinc-950/90 border border-amber-500/30 shadow-2xl space-y-6">
+            {/* Header Icon & Title */}
+            <div className="flex flex-col items-center space-y-3">
+              <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-lg shadow-amber-500/10">
+                <Sparkles className="w-7 h-7 animate-pulse" />
+              </div>
+              <div>
+                <span className="text-[10px] uppercase font-bold tracking-widest text-amber-500 block">
+                  LangGraph Agentic Pipeline
+                </span>
+                <h2 className="text-2xl font-extrabold text-white mt-1">
+                  Synthesizing Course Track
+                </h2>
+              </div>
+            </div>
+
+            {/* Glowing Percentage & Progress Bar */}
+            <div className="space-y-3 bg-zinc-900/60 p-5 rounded-2xl border border-zinc-800/80">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-semibold text-amber-400">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="truncate max-w-[280px] sm:max-w-md text-left">{genStep}</span>
+                </div>
+                <span className="text-xl font-extrabold text-white font-mono tracking-tight shrink-0 ml-2">
+                  {genProgress}%
+                </span>
+              </div>
+
+              <div className="w-full h-3 bg-zinc-950 rounded-full overflow-hidden border border-amber-500/20 relative shadow-inner">
+                <div
+                  className="h-full bg-gradient-to-r from-amber-600 via-amber-500 to-amber-300 transition-all duration-500 rounded-full relative overflow-hidden"
+                  style={{ width: `${genProgress}%` }}
+                >
+                  <div className="absolute inset-0 bg-white/25 animate-[shimmer_1.5s_infinite] -skew-x-12" />
+                </div>
+              </div>
+            </div>
+
+            {/* Step Milestones Checklist */}
+            <div className="grid grid-cols-1 gap-2 text-left pt-1">
+              {steps.map((s) => {
+                const isDone = genProgress >= s.min;
+                const isCurrent = genProgress < s.min && (s.id === 1 || genProgress >= steps[s.id - 2]?.min);
+                return (
+                  <div
+                    key={s.id}
+                    className={`flex items-center justify-between p-3 rounded-xl border text-xs transition-all ${
+                      isDone
+                        ? 'bg-amber-500/10 border-amber-500/30 text-zinc-200'
+                        : isCurrent
+                        ? 'bg-zinc-900 border-amber-500/40 text-amber-400 shadow-md'
+                        : 'bg-zinc-900/30 border-zinc-900 text-zinc-600'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      {isDone ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      ) : isCurrent ? (
+                        <Loader2 className="w-4 h-4 text-amber-400 animate-spin shrink-0" />
+                      ) : (
+                        <Circle className="w-4 h-4 text-zinc-700 shrink-0" />
+                      )}
+                      <span className="font-medium">{s.label}</span>
+                    </div>
+                    {isDone && <span className="text-[10px] font-mono text-emerald-400 font-bold uppercase">Ready</span>}
+                    {isCurrent && <span className="text-[10px] font-mono text-amber-400 font-bold uppercase animate-pulse">Running</span>}
+                  </div>
+                );
+              })}
+            </div>
           </div>
+
           <button
             onClick={() => navigate('/courses')}
-            className="px-5 py-2.5 bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs font-semibold rounded-xl hover:text-white"
+            className="px-5 py-2.5 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-300 text-xs font-semibold rounded-xl hover:text-white transition-all cursor-pointer shadow-lg"
           >
-            ← Return to Dashboard
+            ← Return to Courses
           </button>
+        </div>
+      </Navbar>
+    );
+  }
+
+  // Failed Screen
+  if (course.status === 'failed') {
+    const errorMsg = course.error_message || course.errorMessage || 'Could not extract video content or transcripts. Ensure video has captions or try another link.';
+
+    return (
+      <Navbar>
+        <div className="flex flex-col items-center justify-center py-20 text-center max-w-lg mx-auto px-4 space-y-6">
+          <div className="w-full relative p-8 rounded-3xl bg-zinc-950/90 border border-red-900/40 shadow-2xl space-y-5">
+            <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400 mx-auto shadow-lg shadow-red-500/10">
+              <AlertCircle className="w-7 h-7" />
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-[10px] uppercase font-bold tracking-widest text-red-400 block">
+                Synthesis Unsuccessful
+              </span>
+              <h2 className="text-2xl font-extrabold text-white">Course Generation Failed</h2>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-red-950/20 border border-red-900/30 text-xs text-zinc-300 leading-relaxed text-left">
+              <p className="font-semibold text-red-300 mb-1">Reason:</p>
+              <p className="text-zinc-400">{errorMsg}</p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              <button
+                onClick={handleRetryCourse}
+                disabled={retrying}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-extrabold text-xs shadow-lg shadow-amber-500/25 transition-all active:scale-95 cursor-pointer"
+              >
+                {retrying ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Restarting Pipeline...</span>
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="w-4 h-4" />
+                    <span>Try Again / Retry Generation</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => navigate('/courses')}
+                className="w-full sm:w-auto px-5 py-3 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-300 text-xs font-semibold rounded-2xl hover:text-white transition-all cursor-pointer"
+              >
+                Browse Other Courses
+              </button>
+            </div>
+          </div>
         </div>
       </Navbar>
     );
@@ -602,8 +751,8 @@ const CourseDetail = () => {
                   <div className="space-y-4">
                     {(() => {
                       const module = course.modules?.find((m) => m.id === activeSection.moduleId);
-                      const videoUrl = module?.video_url || course.youtube_url;
-                      const videoId = getYouTubeVideoId(videoUrl);
+                      const videoUrl = module?.video_url || module?.videoUrl || course?.video_url || course?.youtube_url || course?.videoUrl;
+                      const videoId = getYouTubeVideoId(videoUrl, course);
 
                       if (!videoId) {
                         return (
