@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock, User, AlertCircle, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, AlertCircle, Sparkles, Sun, Moon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
 import logo from '../assets/logo.png';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import { useState } from 'react';
 
 const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -18,7 +19,8 @@ const Register = () => {
     confirmPassword: '',
   });
   const [error, setError] = useState('');
-  const { loginAuth } = useAuth();
+  const { loginAuth, isDarkMode, toggleDarkMode } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -32,6 +34,13 @@ const Register = () => {
 
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
+      toast.warning('Passwords do not match. Please recheck.', 'Validation Error');
+      return;
+    }
+
+    if (!termsAccepted) {
+      setError('Please accept terms & conditions');
+      toast.warning('Please accept the Terms of Service to continue.', 'Terms Required');
       return;
     }
 
@@ -42,9 +51,12 @@ const Register = () => {
         email: formData.email,
         password: formData.password,
       });
+      toast.success('Account created successfully! Please sign in.', 'Account Created');
       navigate('/login');
     } catch (err) {
-      setError(err.response?.data?.detail || 'Registration failed. Please try again.');
+      const msg = err.response?.data?.detail || 'Registration failed. Please try again.';
+      setError(msg);
+      toast.error(msg, 'Registration Failed');
     } finally {
       setLoading(false);
     }
@@ -69,6 +81,18 @@ const Register = () => {
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary,#09090b)] flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Top right theme toggle */}
+      <div className="absolute top-5 right-5 z-20">
+        <button
+          type="button"
+          onClick={toggleDarkMode}
+          className="p-2.5 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-[var(--border,rgba(255,255,255,0.08))] text-zinc-400 hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+          title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+        >
+          {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-zinc-700" />}
+        </button>
+      </div>
+
       {/* Background ambient glow */}
       <div className="absolute top-1/4 -right-20 w-96 h-96 rounded-full bg-amber-500/10 blur-[120px] pointer-events-none" />
       <div className="absolute bottom-1/4 -left-20 w-96 h-96 rounded-full bg-emerald-500/10 blur-[120px] pointer-events-none" />
