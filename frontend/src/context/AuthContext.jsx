@@ -5,6 +5,20 @@ import Loader from "../components/Loader";
 
 const AuthContext = createContext();
 
+const THEME_COLORS = {
+  amber:  '#f59e0b',
+  blue:   '#3b82f6',
+  green:  '#22c55e',
+  purple: '#a855f7',
+  pink:   '#ec4899',
+};
+
+const FONT_SIZES = {
+  small:  '14px',
+  medium: '16px',
+  large:  '18px',
+};
+
 const getInitialSettings = () => {
   try {
     const saved = localStorage.getItem("adhyaya_theme_settings");
@@ -22,10 +36,12 @@ export const applyThemeToDOM = (settings) => {
   // 1. Theme color
   const theme = settings.themeColor || "amber";
   root.setAttribute("data-theme", theme);
+  root.style.setProperty('--color-accent', THEME_COLORS[theme] || '#f59e0b');
 
   // 2. Font size
   const fontSize = settings.fontSize || "medium";
   root.setAttribute("data-font-size", fontSize);
+  root.style.fontSize = FONT_SIZES[fontSize] || '16px';
 
   // 3. Dark/Light mode
   const isDark = settings.darkMode !== false;
@@ -54,20 +70,26 @@ applyThemeToDOM(getInitialSettings());
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [settings, setSettings] = useState(getInitialSettings);
   const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    applyThemeToDOM(settings);
+  }, []);
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const res = await api.get("/auth/me");
+        const res = await api.get("/auth/me", { skipToast: true, silent: true });
         setUser(res.data);
         if (res.data?.settings) {
           const merged = { ...getInitialSettings(), ...res.data.settings };
+          setSettings(merged);
           applyThemeToDOM(merged);
         }
       } catch {
         setUser(null);
-        applyThemeToDOM(getInitialSettings());
+        applyThemeToDOM(settings);
       } finally {
         setInitialized(true);
       }
@@ -80,7 +102,9 @@ export const AuthProvider = ({ children }) => {
     const res = await api.get("/auth/me");
     setUser(res.data);
     if (res.data?.settings) {
-      applyThemeToDOM(res.data.settings);
+      const merged = { ...settings, ...res.data.settings };
+      setSettings(merged);
+      applyThemeToDOM(merged);
     }
   };
 
@@ -90,17 +114,23 @@ export const AuthProvider = ({ children }) => {
   };
 
   const updateSettings = async (newSettings) => {
-    setUser((prev) => {
-      const merged = { ...(prev?.settings || getInitialSettings()), ...newSettings };
-      applyThemeToDOM(merged);
-      return prev ? { ...prev, settings: merged } : null;
-    });
-
-    try {
-      await api.patch("/auth/me/settings", newSettings);
-    } catch (e) {
-      // Backend sync error silently handled as local state is already responsive
+    const merged = { ...settings, ...newSettings };
+    setSettings(merged);
+    applyThemeToDOM(merged);
+    if (user) {
+      setUser((prev) => (prev ? { ...prev, settings: merged } : null));
+      try {
+        await api.patch("/auth/me/settings", newSettings, { skipToast: true, silent: true });
+      } catch (e) {
+        // Backend sync error silently handled as local state is already responsive
+      }
     }
+  };
+
+  const isDarkMode = settings.darkMode !== false;
+
+  const toggleDarkMode = () => {
+    updateSettings({ darkMode: !isDarkMode });
   };
 
   if (!initialized) return <Loader />;
@@ -109,6 +139,9 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider
       value={{
         user,
+        settings,
+        isDarkMode,
+        toggleDarkMode,
         isAuthenticated: !!user,
         loginAuth,
         logout,
