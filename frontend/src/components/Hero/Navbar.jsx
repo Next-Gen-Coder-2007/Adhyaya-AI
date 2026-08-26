@@ -5,19 +5,8 @@ import { useAuth } from '../../context/AuthContext';
 import logo from '../../assets/logo.png';
 
 const Navbar = () => {
-  const { user, updateSettings } = useAuth();
+  const { isDarkMode, toggleDarkMode } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  const isDarkMode = user?.settings?.darkMode !== false;
-
-  const toggleDarkMode = () => {
-    updateSettings({ darkMode: !isDarkMode });
-  };
-
-  const handleExploreClick = () => {
-    const el = document.getElementById('ai-agents');
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-[var(--glass-bg,rgba(9,9,11,0.85))] backdrop-blur-xl border-b border-[var(--border,rgba(255,255,255,0.08))] transition-all">
@@ -37,13 +26,6 @@ const Navbar = () => {
 
           {/* Navigation Links */}
           <div className="hidden md:flex items-center gap-4">
-            <button
-              onClick={handleExploreClick}
-              className="px-4 py-2 text-xs font-semibold text-[var(--text-secondary,#a1a1aa)] hover:text-[var(--text-primary,#ffffff)] hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors cursor-pointer"
-            >
-              Multi-Agent Architecture
-            </button>
-
             {/* Quick Dark/Light Toggle */}
             <button
               onClick={toggleDarkMode}
@@ -72,7 +54,7 @@ const Navbar = () => {
             </Link>
           </div>
 
-          {/* Mobile Hamburger */}
+          {/* Mobile Controls */}
           <div className="md:hidden flex items-center gap-2">
             <button
               onClick={toggleDarkMode}
@@ -92,15 +74,6 @@ const Navbar = () => {
         {/* Mobile Dropdown */}
         {isMenuOpen && (
           <div className="md:hidden bg-[var(--bg-secondary,#121215)] border-t border-[var(--border,rgba(255,255,255,0.08))] px-4 py-4 space-y-2 rounded-b-2xl shadow-2xl">
-            <button
-              onClick={() => {
-                handleExploreClick();
-                setIsMenuOpen(false);
-              }}
-              className="block w-full text-left px-3 py-2 text-xs font-medium text-[var(--text-secondary,#a1a1aa)] hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-            >
-              Multi-Agent Architecture
-            </button>
             <Link
               to="/login"
               onClick={() => setIsMenuOpen(false)}
