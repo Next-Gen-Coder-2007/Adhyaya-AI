@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   * {
     scrollbar-width: thin;
@@ -43,6 +45,7 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     min-height: 100vh;
     overflow-x: hidden;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 }
 
@@ -84,34 +87,70 @@ html.lenis body {
 }
 
 /* ==========================================================================
-   DARK MODE PALETTE (DEFAULT)
+   DARK MODE PALETTE (PURE OLED BLACK)
    ========================================================================== */
 :root,
-html.dark {
-  --bg-primary: #09090b;      /* zinc-950 */
-  --bg-secondary: #121215;    /* deep surface */
-  --bg-tertiary: #1c1c21;     /* elevated card */
-  --bg-card: rgba(18, 18, 22, 0.85);
-  --text-primary: #f4f4f5;    /* zinc-100 */
-  --text-secondary: #a1a1aa;  /* zinc-400 */
-  --text-muted: #71717a;      /* zinc-500 */
-  --text-subtle: #52525b;     /* zinc-600 */
+html.dark,
+body.dark,
+.dark {
+  --bg-primary: #000000;      /* Pure OLED Black */
+  --bg-secondary: #080808;    /* Deep Surface Black */
+  --bg-tertiary: #101010;     /* Elevated Card Surface */
+  --bg-card: #080808;
+  --text-primary: #f4f4f5;    /* Crisp White */
+  --text-secondary: #a1a1aa;  /* Muted Silver */
+  --text-muted: #71717a;      /* Slate/Zinc-500 */
+  --text-subtle: #52525b;     /* Slate/Zinc-600 */
   --border: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.15);
   --border-subtle: rgba(255, 255, 255, 0.04);
-  --glass-bg: rgba(9, 9, 11, 0.85);
+  --glass-bg: rgba(0, 0, 0, 0.85);
   --glass-border: rgba(255, 255, 255, 0.08);
 }
 
+/* Pure Black Background in Dark Mode */
+html.dark,
+body.dark {
+  background-color: #000000 !important;
+  color: #f4f4f5 !important;
+}
+
+html.dark .bg-zinc-950:not(.modal-backdrop):not([class*="/"]),
+body.dark .bg-zinc-950:not(.modal-backdrop):not([class*="/"]),
+html.dark .bg-black:not(.modal-backdrop):not([class*="/"]),
+body.dark .bg-black:not(.modal-backdrop):not([class*="/"]) {
+  background-color: #000000 !important;
+}
+
+html.dark .bg-zinc-900:not(.modal-backdrop),
+body.dark .bg-zinc-900:not(.modal-backdrop) {
+  background-color: #080808 !important;
+}
+
+html.dark .bg-zinc-800:not(.modal-backdrop),
+body.dark .bg-zinc-800:not(.modal-backdrop) {
+  background-color: #101010 !important;
+}
+
 /* ==========================================================================
-   LIGHT MODE PALETTE
+   PURE NEUTRAL TRANSPARENT MODAL BACKDROP (ZERO BLUE TINT)
+   ========================================================================== */
+.modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+/* ==========================================================================
+   LIGHT MODE PALETTE (CRISP PURE WHITE SURFACES & NAVS)
    ========================================================================== */
 html.light,
-body.light {
-  --bg-primary: #f8fafc;      /* slate-50 */
-  --bg-secondary: #ffffff;    /* pure white */
-  --bg-tertiary: #f1f5f9;     /* slate-100 */
-  --bg-card: rgba(255, 255, 255, 0.95);
+body.light,
+.light {
+  --bg-primary: #f8fafc;      /* slate-50 background for page content */
+  --bg-secondary: #ffffff;    /* pure white for navbar, sidebar, cards */
+  --bg-tertiary: #f1f5f9;     /* slate-100 for subtle nested panels */
+  --bg-card: #ffffff;         /* pure white card background */
   --text-primary: #0f172a;    /* slate-900 */
   --text-secondary: #334155;  /* slate-700 */
   --text-muted: #64748b;      /* slate-500 */
@@ -119,100 +158,155 @@ body.light {
   --border: #e2e8f0;
   --border-strong: #cbd5e1;
   --border-subtle: #f1f5f9;
-  --glass-bg: rgba(255, 255, 255, 0.92);
-  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-bg: #ffffff;        /* PURE WHITE NAVBAR */
+  --glass-border: #e2e8f0;
 }
 
 /* ==========================================================================
    COMPREHENSIVE LIGHT THEME GLOBAL CASCADE
    ========================================================================== */
 html.light,
-html.light body {
+html.light body,
+body.light,
+.light {
   background-color: #f8fafc !important;
   color: #0f172a !important;
 }
 
-/* Light Backgrounds */
-html.light .bg-zinc-950,
-html.light [class*="bg-zinc-950"],
-html.light .bg-black,
-html.light [class*="bg-black"] {
-  background-color: #f8fafc !important;
+/* All Navbars, Top Headers, Sidebars & Drawers in Light Mode -> Pure White */
+html.light nav,
+html.light header,
+html.light aside,
+body.light nav,
+body.light header,
+body.light aside {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
 }
 
-html.light .bg-zinc-900,
-html.light [class*="bg-zinc-900"],
-html.light .bg-gray-900,
-html.light [class*="bg-gray-900"] {
+/* Light Backgrounds */
+html.light .bg-zinc-950:not(.modal-backdrop):not([class*="/"]),
+html.light .bg-black:not(.modal-backdrop):not([class*="/"]),
+html.light .bg-zinc-900:not(.modal-backdrop):not([class*="/"]),
+html.light .bg-gray-950:not(.modal-backdrop):not([class*="/"]),
+html.light .bg-gray-900:not(.modal-backdrop):not([class*="/"]),
+body.light .bg-zinc-950:not(.modal-backdrop):not([class*="/"]),
+body.light .bg-black:not(.modal-backdrop):not([class*="/"]),
+body.light .bg-zinc-900:not(.modal-backdrop):not([class*="/"]),
+body.light .bg-gray-950:not(.modal-backdrop):not([class*="/"]),
+body.light .bg-gray-900:not(.modal-backdrop):not([class*="/"]) {
   background-color: #ffffff !important;
 }
 
-html.light .bg-zinc-800,
+html.light [class*="bg-zinc-950/"]:not(.modal-backdrop):not([class*="bg-amber-"]),
+html.light [class*="bg-zinc-900/"]:not(.modal-backdrop):not([class*="bg-amber-"]),
+body.light [class*="bg-zinc-950/"]:not(.modal-backdrop):not([class*="bg-amber-"]),
+body.light [class*="bg-zinc-900/"]:not(.modal-backdrop):not([class*="bg-amber-"]) {
+  background-color: #ffffff !important;
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.03) !important;
+}
+
 html.light [class*="bg-zinc-800"],
-html.light .bg-gray-800,
-html.light [class*="bg-gray-800"] {
+body.light [class*="bg-zinc-800"] {
   background-color: #f1f5f9 !important;
 }
 
-html.light [class*="bg-white/5"],
-html.light [class*="bg-white/10"],
-html.light [class*="bg-white/15"] {
-  background-color: rgba(0, 0, 0, 0.04) !important;
-}
-
 /* Light Borders & Dividers */
-html.light .border-zinc-900,
-html.light [class*="border-zinc-900"],
-html.light .border-zinc-800,
-html.light [class*="border-zinc-800"],
-html.light .border-zinc-700,
-html.light [class*="border-zinc-700"],
-html.light .border-gray-800,
-html.light [class*="border-gray-800"],
-html.light [class*="border-white/"] {
+html.light [class*="border-zinc-"]:not([class*="border-amber-"]),
+html.light [class*="border-gray-"]:not([class*="border-amber-"]),
+body.light [class*="border-zinc-"]:not([class*="border-amber-"]),
+body.light [class*="border-gray-"]:not([class*="border-amber-"]) {
   border-color: #e2e8f0 !important;
 }
 
 html.light [class*="divide-zinc-"] > * + *,
-html.light [class*="divide-gray-"] > * + * {
+body.light [class*="divide-zinc-"] > * + * {
   border-color: #e2e8f0 !important;
 }
 
 /* Light Typography */
 html.light .text-white,
-html.light .text-zinc-100,
-html.light .text-zinc-200,
-html.light .text-gray-100,
-html.light .text-gray-200 {
+html.light [class*="text-zinc-100"],
+html.light [class*="text-zinc-200"],
+body.light .text-white,
+body.light [class*="text-zinc-100"],
+body.light [class*="text-zinc-200"] {
   color: #0f172a !important;
 }
 
-html.light .text-zinc-300,
-html.light .text-zinc-400,
-html.light .text-gray-300,
-html.light .text-gray-400 {
+html.light [class*="text-zinc-300"],
+html.light [class*="text-zinc-400"],
+body.light [class*="text-zinc-300"],
+body.light [class*="text-zinc-400"] {
   color: #334155 !important;
 }
 
-html.light .text-zinc-500,
-html.light .text-zinc-600,
-html.light .text-zinc-700,
-html.light .text-gray-500 {
+html.light [class*="text-zinc-500"],
+html.light [class*="text-zinc-600"],
+body.light [class*="text-zinc-500"],
+body.light [class*="text-zinc-600"] {
   color: #64748b !important;
 }
 
 /* Light Form Inputs */
 html.light input,
+body.light input,
 html.light textarea,
-html.light select {
+body.light textarea,
+html.light select,
+body.light select {
   background-color: #ffffff !important;
   color: #0f172a !important;
   border-color: #cbd5e1 !important;
 }
 
 html.light input::placeholder,
-html.light textarea::placeholder {
+body.light input::placeholder,
+html.light textarea::placeholder,
+body.light textarea::placeholder {
   color: #94a3b8 !important;
+}
+
+/* Light Mode Glass panels & Cards */
+html.light .glass-panel,
+body.light .glass-panel {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.light .glass-card,
+body.light .glass-card {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Amber/Gold Elements in Light Mode */
+html.light .bg-amber-500\/10,
+body.light .bg-amber-500\/10 {
+  background-color: rgba(245, 158, 11, 0.12) !important;
+}
+
+html.light .border-amber-500\/30,
+body.light .border-amber-500\/30 {
+  border-color: rgba(245, 158, 11, 0.35) !important;
+}
+
+html.light .text-amber-500,
+html.light .text-amber-400,
+body.light .text-amber-500,
+body.light .text-amber-400 {
+  color: #d97706 !important;
+}
+
+/* CTA & Accent buttons stay sharp with black text */
+html.light [class*="bg-amber-500"],
+html.light [class*="from-amber-500"],
+html.light .text-black,
+body.light [class*="bg-amber-500"],
+body.light [class*="from-amber-500"],
+body.light .text-black {
+  color: #000000 !important;
 }
 
 /* ==========================================================================
@@ -288,4 +382,13 @@ html.light textarea::placeholder {
 
 .animate-pulse-glow {
   animation: pulse-glow 2.5s infinite alternate ease-in-out;
+}
+
+@keyframes shrinkWidth {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
 }
