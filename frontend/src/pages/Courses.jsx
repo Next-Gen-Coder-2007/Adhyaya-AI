@@ -8,7 +8,7 @@ import CreateCourseModal from '../components/Courses/CreateCourseModal';
 import api from '../api/axios';
 
 const Courses = () => {
-  const { user } = useAuth();
+  const { user, settings } = useAuth();
   const [courses, setCourses] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'in_progress', 'completed', 'generating'
@@ -16,7 +16,7 @@ const Courses = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
 
-  const layout = user?.settings?.layoutMode ?? 'grid';
+  const layout = settings?.layoutMode || user?.settings?.layoutMode || 'grid';
 
   const gridClass =
     layout === 'list'
@@ -41,7 +41,7 @@ const Courses = () => {
     fetchCourses();
   }, []);
 
-  // Low-frequency polling for generating courses (client computes smooth 60fps progress locally)
+  // Low-frequency polling for generating courses
   useEffect(() => {
     const hasGenerating = courses.some((c) => c.status === 'generating');
     let interval;
@@ -80,10 +80,10 @@ const Courses = () => {
         {/* Header and Create Button */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
+            <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
               Course Library
             </h1>
-            <p className="mt-1 text-xs sm:text-sm text-zinc-400">
+            <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-zinc-400">
               Access your personalized AI-synthesized curricula and track learning milestones.
             </p>
           </div>
@@ -100,7 +100,7 @@ const Courses = () => {
         {/* Filter and Search Bar */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           {/* Filter Pills */}
-          <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-1">
+          <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-1 scrollbar-thin">
             {[
               { id: 'all', label: 'All Courses', count: courses.length },
               {
@@ -131,13 +131,13 @@ const Courses = () => {
                 className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
                   activeFilter === tab.id
                     ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/10'
-                    : 'bg-zinc-900/60 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700'
+                    : 'bg-slate-100 dark:bg-zinc-900/60 border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-zinc-700'
                 }`}
               >
                 <span>{tab.label}</span>
                 <span
                   className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                    activeFilter === tab.id ? 'bg-black/20 text-black' : 'bg-zinc-800 text-zinc-400'
+                    activeFilter === tab.id ? 'bg-black/20 text-black' : 'bg-slate-200 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400'
                   }`}
                 >
                   {tab.count}
@@ -148,18 +148,18 @@ const Courses = () => {
 
           {/* Search Box */}
           <div className="relative w-full md:w-72">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-zinc-500" />
             <input
               type="text"
               placeholder="Search by keyword..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-8 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 focus:border-amber-500 text-xs text-white placeholder-zinc-500 outline-none transition-colors"
+              className="w-full pl-10 pr-8 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 focus:border-amber-500 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 outline-none transition-colors shadow-sm"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white cursor-pointer"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-900 dark:text-zinc-500 dark:hover:text-white cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -171,7 +171,7 @@ const Courses = () => {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24 space-y-4">
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-amber-500 border-t-transparent" />
-            <p className="text-xs text-zinc-500">Retrieving your course catalogue...</p>
+            <p className="text-xs text-slate-500 dark:text-zinc-500">Retrieving your course catalogue...</p>
           </div>
         ) : filteredCourses.length > 0 ? (
           <div className={gridClass}>
@@ -187,13 +187,13 @@ const Courses = () => {
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-20 text-center rounded-3xl bg-zinc-950 border border-zinc-900 p-8 space-y-4 shadow-xl">
-            <div className="w-14 h-14 rounded-2xl bg-zinc-900 flex items-center justify-center text-zinc-600">
+          <div className="flex flex-col items-center justify-center py-20 text-center rounded-3xl bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-900 p-8 space-y-4 shadow-md">
+            <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-zinc-900 flex items-center justify-center text-slate-400 dark:text-zinc-600">
               <BookOpen className="w-7 h-7" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">No courses match your filter</h3>
-              <p className="text-xs text-zinc-400 mt-1 max-w-sm mx-auto">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">No courses match your filter</h3>
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1 max-w-sm mx-auto">
                 {searchQuery
                   ? `No courses matching "${searchQuery}". Try a different keyword.`
                   : 'Start by generating a new AI curriculum from any educational video.'}
@@ -201,7 +201,7 @@ const Courses = () => {
             </div>
             <button
               onClick={() => setIsModalOpen(true)}
-              className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs transition-colors cursor-pointer"
+              className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs transition-colors cursor-pointer shadow-md shadow-amber-500/20"
             >
               Create Course
             </button>

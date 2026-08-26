@@ -35,6 +35,7 @@ import ChatPanel from './ChatPanel';
 import CustomYouTubePlayer from './CustomYoutubePlayer';
 import CertificateModal from './CertificateModal';
 import { useCourseProgress } from '../../hooks/useCourseProgress';
+import { useToast } from '../../context/ToastContext';
 
 const formatTime = (seconds) => {
   if (seconds === null || seconds === undefined || isNaN(seconds)) return null;
@@ -109,6 +110,7 @@ const getYouTubeVideoId = (url, fallbackCourse) => {
 const CourseDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -387,9 +389,11 @@ const CourseDetail = () => {
     try {
       await api.put(`/courses/${id}/notes`, { notes });
       setNotesSaved(true);
+      toast.success('Study notes saved successfully!', 'Notes Saved', 5000);
       setTimeout(() => setNotesSaved(false), 2500);
     } catch (err) {
       console.error('Failed to save notes:', err);
+      toast.error(err.response?.data?.detail || 'Failed to save notes. Please try again.', 'Save Error', 5000);
     } finally {
       setNotesSaving(false);
     }
@@ -431,9 +435,9 @@ const CourseDetail = () => {
         <div className="flex flex-col items-center justify-center py-32 space-y-4">
           <div className="relative">
             <Loader2 className="h-10 w-10 animate-spin text-amber-500" />
-            <Sparkles className="w-4 h-4 text-amber-400 absolute top-0 right-0 animate-ping" />
+            <Sparkles className="w-4 h-4 text-amber-500 absolute top-0 right-0 animate-ping" />
           </div>
-          <p className="text-sm font-medium text-zinc-400">Loading course curriculum and studio...</p>
+          <p className="text-sm font-medium text-slate-600 dark:text-zinc-400">Loading course curriculum and studio...</p>
         </div>
       </Navbar>
     );
@@ -444,14 +448,14 @@ const CourseDetail = () => {
     return (
       <Navbar>
         <div className="flex flex-col items-center justify-center py-20 text-center max-w-md mx-auto space-y-4">
-          <div className="p-4 rounded-2xl bg-red-950/40 border border-red-800/60 text-red-400">
+          <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 text-red-600 dark:text-red-400">
             <AlertCircle className="w-10 h-10 mx-auto mb-2" />
-            <h2 className="text-lg font-bold text-white">Course Load Error</h2>
-            <p className="text-xs text-zinc-400 mt-1">{error || 'Course not found'}</p>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Course Load Error</h2>
+            <p className="text-xs text-slate-600 dark:text-zinc-400 mt-1">{error || 'Course not found'}</p>
           </div>
           <button
             onClick={() => navigate('/courses')}
-            className="px-5 py-2.5 bg-zinc-900 border border-zinc-800 text-white text-xs font-semibold rounded-xl hover:bg-zinc-800 transition-colors"
+            className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 text-slate-800 dark:text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer"
           >
             ← Back to Courses
           </button>
@@ -472,35 +476,35 @@ const CourseDetail = () => {
     return (
       <Navbar>
         <div className="flex flex-col items-center justify-center py-16 text-center max-w-xl mx-auto px-4 space-y-6">
-          <div className="w-full relative p-8 rounded-3xl bg-zinc-950/90 border border-amber-500/30 shadow-2xl space-y-6">
+          <div className="w-full relative p-8 rounded-3xl bg-white dark:bg-zinc-950 border border-amber-500/30 shadow-2xl space-y-6">
             {/* Header Icon & Title */}
             <div className="flex flex-col items-center space-y-3">
-              <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-lg shadow-amber-500/10">
+              <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 shadow-lg shadow-amber-500/10">
                 <Sparkles className="w-7 h-7 animate-pulse" />
               </div>
               <div>
                 <span className="text-[10px] uppercase font-bold tracking-widest text-amber-500 block">
                   LangGraph Agentic Pipeline
                 </span>
-                <h2 className="text-2xl font-extrabold text-white mt-1">
+                <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">
                   Synthesizing Course Track
                 </h2>
               </div>
             </div>
 
             {/* Glowing Percentage & Progress Bar */}
-            <div className="space-y-3 bg-zinc-900/60 p-5 rounded-2xl border border-zinc-800/80">
+            <div className="space-y-3 bg-slate-50 dark:bg-zinc-900/60 p-5 rounded-2xl border border-slate-200 dark:border-zinc-800/80">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-semibold text-amber-400">
+                <div className="flex items-center gap-2 text-xs font-semibold text-amber-600 dark:text-amber-400">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span className="truncate max-w-[280px] sm:max-w-md text-left">{genStep}</span>
                 </div>
-                <span className="text-xl font-extrabold text-white font-mono tracking-tight shrink-0 ml-2">
+                <span className="text-xl font-extrabold text-slate-900 dark:text-white font-mono tracking-tight shrink-0 ml-2">
                   {genProgress}%
                 </span>
               </div>
 
-              <div className="w-full h-3 bg-zinc-950 rounded-full overflow-hidden border border-amber-500/20 relative shadow-inner">
+              <div className="w-full h-3 bg-slate-200 dark:bg-zinc-950 rounded-full overflow-hidden border border-amber-500/20 relative shadow-inner">
                 <div
                   className="h-full bg-gradient-to-r from-amber-600 via-amber-500 to-amber-300 transition-all duration-500 rounded-full relative overflow-hidden"
                   style={{ width: `${genProgress}%` }}
@@ -520,24 +524,24 @@ const CourseDetail = () => {
                     key={s.id}
                     className={`flex items-center justify-between p-3 rounded-xl border text-xs transition-all ${
                       isDone
-                        ? 'bg-amber-500/10 border-amber-500/30 text-zinc-200'
+                        ? 'bg-amber-500/10 border-amber-500/30 text-slate-800 dark:text-zinc-200'
                         : isCurrent
-                        ? 'bg-zinc-900 border-amber-500/40 text-amber-400 shadow-md'
-                        : 'bg-zinc-900/30 border-zinc-900 text-zinc-600'
+                        ? 'bg-amber-500/15 border-amber-500/50 text-amber-700 dark:text-amber-400 shadow-md font-semibold'
+                        : 'bg-slate-50 dark:bg-zinc-900/30 border-slate-200 dark:border-zinc-900 text-slate-400 dark:text-zinc-600'
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
                       {isDone ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400 shrink-0" />
                       ) : isCurrent ? (
-                        <Loader2 className="w-4 h-4 text-amber-400 animate-spin shrink-0" />
+                        <Loader2 className="w-4 h-4 text-amber-500 animate-spin shrink-0" />
                       ) : (
-                        <Circle className="w-4 h-4 text-zinc-700 shrink-0" />
+                        <Circle className="w-4 h-4 text-slate-300 dark:text-zinc-700 shrink-0" />
                       )}
-                      <span className="font-medium">{s.label}</span>
+                      <span>{s.label}</span>
                     </div>
-                    {isDone && <span className="text-[10px] font-mono text-emerald-400 font-bold uppercase">Ready</span>}
-                    {isCurrent && <span className="text-[10px] font-mono text-amber-400 font-bold uppercase animate-pulse">Running</span>}
+                    {isDone && <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold uppercase">Ready</span>}
+                    {isCurrent && <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400 font-bold uppercase animate-pulse">Running</span>}
                   </div>
                 );
               })}
@@ -546,7 +550,7 @@ const CourseDetail = () => {
 
           <button
             onClick={() => navigate('/courses')}
-            className="px-5 py-2.5 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-300 text-xs font-semibold rounded-xl hover:text-white transition-all cursor-pointer shadow-lg"
+            className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 text-slate-700 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-white text-xs font-semibold rounded-xl transition-all cursor-pointer shadow-sm"
           >
             ← Return to Courses
           </button>
@@ -562,21 +566,21 @@ const CourseDetail = () => {
     return (
       <Navbar>
         <div className="flex flex-col items-center justify-center py-20 text-center max-w-lg mx-auto px-4 space-y-6">
-          <div className="w-full relative p-8 rounded-3xl bg-zinc-950/90 border border-red-900/40 shadow-2xl space-y-5">
-            <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400 mx-auto shadow-lg shadow-red-500/10">
+          <div className="w-full relative p-8 rounded-3xl bg-white dark:bg-zinc-950 border border-red-200 dark:border-red-900/40 shadow-2xl space-y-5">
+            <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-500 mx-auto shadow-lg shadow-red-500/10">
               <AlertCircle className="w-7 h-7" />
             </div>
 
             <div className="space-y-1">
-              <span className="text-[10px] uppercase font-bold tracking-widest text-red-400 block">
+              <span className="text-[10px] uppercase font-bold tracking-widest text-red-500 block">
                 Synthesis Unsuccessful
               </span>
-              <h2 className="text-2xl font-extrabold text-white">Course Generation Failed</h2>
+              <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white">Course Generation Failed</h2>
             </div>
 
-            <div className="p-4 rounded-2xl bg-red-950/20 border border-red-900/30 text-xs text-zinc-300 leading-relaxed text-left">
-              <p className="font-semibold text-red-300 mb-1">Reason:</p>
-              <p className="text-zinc-400">{errorMsg}</p>
+            <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 text-xs text-slate-700 dark:text-zinc-300 leading-relaxed text-left">
+              <p className="font-semibold text-red-600 dark:text-red-300 mb-1">Reason:</p>
+              <p className="text-slate-600 dark:text-zinc-400">{errorMsg}</p>
             </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
@@ -600,7 +604,7 @@ const CourseDetail = () => {
 
               <button
                 onClick={() => navigate('/courses')}
-                className="w-full sm:w-auto px-5 py-3 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-300 text-xs font-semibold rounded-2xl hover:text-white transition-all cursor-pointer"
+                className="w-full sm:w-auto px-5 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 text-slate-700 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-white text-xs font-semibold rounded-2xl transition-all cursor-pointer shadow-sm"
               >
                 Browse Other Courses
               </button>
@@ -613,22 +617,22 @@ const CourseDetail = () => {
 
   return (
     <Navbar>
-      <div className="max-w-[1680px] mx-auto px-2 sm:px-4 lg:px-6 py-4 space-y-6">
+      <div className="max-w-[1680px] mx-auto px-2 sm:px-4 lg:px-6 py-2 space-y-6">
         {/* Top Header Bar */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-2xl bg-zinc-950 border border-zinc-900 shadow-lg">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-900 shadow-md">
           <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => navigate(`/courses/${id}`)}
-              className="p-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer shrink-0"
+              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 text-slate-700 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white transition-colors cursor-pointer shrink-0 shadow-sm"
               title="Course Overview"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
             <div className="min-w-0">
-              <span className="text-[10px] uppercase font-bold tracking-widest text-amber-500 block">
+              <span className="text-[10px] uppercase font-bold tracking-widest text-amber-600 dark:text-amber-500 block">
                 Study Room
               </span>
-              <h1 className="text-lg font-bold text-white truncate max-w-2xl">
+              <h1 className="text-lg font-bold text-slate-900 dark:text-white truncate max-w-2xl">
                 {course.title}
               </h1>
             </div>
@@ -637,11 +641,11 @@ const CourseDetail = () => {
           <div className="flex items-center gap-3 shrink-0">
             {/* Progress Bar */}
             <div className="w-40 hidden sm:block">
-              <div className="flex justify-between text-[11px] text-zinc-400 mb-1">
+              <div className="flex justify-between text-[11px] text-slate-500 dark:text-zinc-400 mb-1">
                 <span>Curriculum Progress</span>
-                <span className="font-bold text-amber-400">{progress}%</span>
+                <span className="font-bold text-amber-600 dark:text-amber-400">{progress}%</span>
               </div>
-              <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
+              <div className="w-full h-2 bg-slate-200 dark:bg-zinc-900 rounded-full overflow-hidden border border-slate-200 dark:border-zinc-800">
                 <div
                   className="h-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-500 rounded-full"
                   style={{ width: `${progress}%` }}
@@ -665,7 +669,7 @@ const CourseDetail = () => {
             {/* Keyboard Shortcuts Trigger */}
             <button
               onClick={() => setIsShortcutsOpen(true)}
-              className="p-2 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 text-slate-700 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white transition-colors cursor-pointer shadow-sm"
               title="Keyboard Hotkeys (?)"
             >
               <Keyboard className="w-4 h-4" />
@@ -676,7 +680,7 @@ const CourseDetail = () => {
               href={`${api.defaults.baseURL || ''}/courses/${id}/export`}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-xs font-semibold text-zinc-300 hover:text-white transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 text-xs font-semibold text-slate-700 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-white transition-colors shadow-sm"
               title="Download Course & Notes Markdown"
             >
               <Download className="w-3.5 h-3.5" />
@@ -685,19 +689,19 @@ const CourseDetail = () => {
           </div>
         </div>
 
-        {/* Studio Grid: Content Area (Left 2 cols) & Syllabus (Right 1 col) */}
+        {/* Studio Grid: Content Area (Left 8 cols) & Syllabus (Right 4 cols) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Main Content Area (8 Cols) */}
           <div className="lg:col-span-8 space-y-6">
             {/* Content Tabs (Lesson Hub vs Live Notes) */}
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-zinc-800 pb-2">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setActiveTab('content')}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     activeTab === 'content'
-                      ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/10'
-                      : 'bg-zinc-900/60 text-zinc-400 hover:text-white border border-zinc-800'
+                      ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20'
+                      : 'bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900/60 dark:hover:bg-zinc-800 text-slate-700 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white border border-slate-200 dark:border-zinc-800'
                   }`}
                 >
                   {getSectionIcon(activeSection?.type)}
@@ -708,13 +712,13 @@ const CourseDetail = () => {
                   onClick={() => setActiveTab('notes')}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     activeTab === 'notes'
-                      ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/10'
-                      : 'bg-zinc-900/60 text-zinc-400 hover:text-white border border-zinc-800'
+                      ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20'
+                      : 'bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900/60 dark:hover:bg-zinc-800 text-slate-700 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white border border-slate-200 dark:border-zinc-800'
                   }`}
                 >
                   <FileText className="w-4 h-4" />
                   <span>Study Notes & Scratchpad</span>
-                  {notes && <span className="w-2 h-2 rounded-full bg-amber-400" />}
+                  {notes && <span className="w-2 h-2 rounded-full bg-amber-500" />}
                 </button>
               </div>
 
@@ -722,10 +726,10 @@ const CourseDetail = () => {
               {activeSection && (
                 <button
                   onClick={() => toggleSectionCompletion(activeSection.id)}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-sm ${
                     activeSection.completed
-                      ? 'bg-green-500/15 border border-green-500/40 text-green-400'
-                      : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700'
+                      ? 'bg-emerald-500/15 border border-emerald-500/40 text-emerald-600 dark:text-emerald-400'
+                      : 'bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 text-slate-700 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white'
                   }`}
                 >
                   {activeSection.completed ? (
@@ -756,7 +760,7 @@ const CourseDetail = () => {
 
                       if (!videoId) {
                         return (
-                          <div className="p-12 text-center rounded-2xl bg-zinc-950 border border-zinc-900 text-zinc-500">
+                          <div className="p-12 text-center rounded-2xl bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-900 text-slate-500 dark:text-zinc-500 shadow-sm">
                             <Film className="w-8 h-8 mx-auto mb-2 opacity-50" />
                             <p className="text-sm">Video URL is not available for this lecture.</p>
                           </div>
@@ -775,53 +779,39 @@ const CourseDetail = () => {
                     })()}
 
                     {/* Video Metadata & Live Timestamp Controls */}
-                    <div className="p-5 rounded-2xl bg-zinc-950 border border-zinc-900 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="p-5 rounded-2xl bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-900 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div>
-                        <h2 className="text-base font-bold text-white">{activeSection.title}</h2>
-                        <p className="text-xs font-mono text-zinc-500 mt-0.5">
+                        <h2 className="text-base font-bold text-slate-900 dark:text-white">{activeSection.title}</h2>
+                        <p className="text-xs font-mono text-slate-500 dark:text-zinc-400 mt-0.5">
                           Timeline: {renderTimeRange(activeSection.start_time, activeSection.end_time)}
                         </p>
                       </div>
 
                       <button
                         onClick={handleInsertTimestampNote}
-                        className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-medium text-amber-400 hover:text-amber-300 transition-colors cursor-pointer shrink-0"
+                        className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 transition-colors cursor-pointer shrink-0 shadow-sm"
                       >
                         <Clock className="w-3.5 h-3.5" />
                         <span>+ Note at {formatTime(currentVideoTime) || '00:00'}</span>
                       </button>
                     </div>
-
-                    {/* Synchronized Transcript Segment */}
-                    {activeSection.content && (
-                      <div className="p-5 rounded-2xl bg-zinc-950/80 border border-zinc-900 space-y-2">
-                        <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-500 block">
-                          Transcript Synopsis
-                        </span>
-                        <p className="text-xs leading-relaxed text-zinc-300 whitespace-pre-line font-normal">
-                          {typeof activeSection.content === 'string'
-                            ? activeSection.content
-                            : activeSection.content?.summary || 'No transcript text available.'}
-                        </p>
-                      </div>
-                    )}
                   </div>
                 )}
 
                 {/* QUIZ SECTION */}
                 {activeSection?.type === 'quiz' && (
-                  <div className="p-6 rounded-2xl bg-zinc-950 border border-zinc-900 space-y-6 shadow-xl">
-                    <div className="flex items-start justify-between border-b border-zinc-900 pb-4">
+                  <div className="p-6 rounded-2xl bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-900 space-y-6 shadow-xl">
+                    <div className="flex items-start justify-between border-b border-slate-200 dark:border-zinc-900 pb-4">
                       <div>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 block">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 block">
                           Module Assessment
                         </span>
-                        <h2 className="text-xl font-bold text-white mt-1">{activeSection.title}</h2>
-                        <p className="text-xs text-zinc-500 mt-1">
+                        <h2 className="text-xl font-bold text-slate-900 dark:text-white mt-1">{activeSection.title}</h2>
+                        <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
                           Test your understanding of the concepts covered in this module.
                         </p>
                       </div>
-                      <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                      <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
                         <HelpCircle className="w-5 h-5" />
                       </div>
                     </div>
@@ -839,16 +829,16 @@ const CourseDetail = () => {
                             className={`p-5 rounded-xl border transition-all ${
                               quizSubmitted
                                 ? isCorrect
-                                  ? 'bg-emerald-950/20 border-emerald-500/40'
-                                  : 'bg-red-950/20 border-red-500/40'
-                                : 'bg-zinc-900/40 border-zinc-800/80'
+                                  ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-500/40'
+                                  : 'bg-red-50 dark:bg-red-950/20 border-red-300 dark:border-red-500/40'
+                                : 'bg-slate-50 dark:bg-zinc-900/40 border-slate-200 dark:border-zinc-800/80'
                             }`}
                           >
                             <div className="flex items-start justify-between gap-3 mb-3">
-                              <p className="text-sm font-semibold text-zinc-100">
+                              <p className="text-sm font-semibold text-slate-900 dark:text-zinc-100">
                                 {qIdx + 1}. {q.question}
                               </p>
-                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-400">
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-200 dark:bg-zinc-800 text-slate-700 dark:text-zinc-400 border border-slate-300 dark:border-zinc-700">
                                 {q.type}
                               </span>
                             </div>
@@ -867,21 +857,21 @@ const CourseDetail = () => {
                                       disabled={quizSubmitted}
                                       className={`p-3 rounded-xl text-xs text-left transition-all flex items-center justify-between border cursor-pointer ${
                                         isSelected
-                                          ? 'bg-amber-500/15 border-amber-500 text-white font-medium'
-                                          : 'bg-zinc-900/60 border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                                          ? 'bg-amber-500/15 border-amber-500 text-slate-900 dark:text-white font-medium'
+                                          : 'bg-white dark:bg-zinc-900/60 border-slate-200 dark:border-zinc-800 text-slate-800 dark:text-zinc-300 hover:border-slate-300 dark:hover:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800/60'
                                       } ${
                                         quizSubmitted && isOptCorrect
-                                          ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 font-bold'
+                                          ? 'bg-emerald-500/20 border-emerald-500 text-emerald-700 dark:text-emerald-300 font-bold'
                                           : ''
                                       } ${
                                         quizSubmitted && isSelected && !isOptCorrect
-                                          ? 'bg-red-500/20 border-red-500 text-red-300'
+                                          ? 'bg-red-500/20 border-red-500 text-red-700 dark:text-red-300'
                                           : ''
                                       }`}
                                     >
                                       <span>{opt}</span>
                                       {quizSubmitted && isOptCorrect && (
-                                        <Check className="w-4 h-4 text-emerald-400" />
+                                        <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                                       )}
                                     </button>
                                   );
@@ -903,15 +893,15 @@ const CourseDetail = () => {
                                       disabled={quizSubmitted}
                                       className={`px-5 py-2.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
                                         isSelected
-                                          ? 'bg-amber-500/15 border-amber-500 text-white'
-                                          : 'bg-zinc-900/60 border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                                          ? 'bg-amber-500/15 border-amber-500 text-slate-900 dark:text-white font-bold'
+                                          : 'bg-white dark:bg-zinc-900/60 border-slate-200 dark:border-zinc-800 text-slate-800 dark:text-zinc-300 hover:border-slate-300 dark:hover:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800/60'
                                       } ${
                                         quizSubmitted && isOptCorrect
-                                          ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 font-bold'
+                                          ? 'bg-emerald-500/20 border-emerald-500 text-emerald-700 dark:text-emerald-300 font-bold'
                                           : ''
                                       } ${
                                         quizSubmitted && isSelected && !isOptCorrect
-                                          ? 'bg-red-500/20 border-red-500 text-red-300'
+                                          ? 'bg-red-500/20 border-red-500 text-red-700 dark:text-red-300'
                                           : ''
                                       }`}
                                     >
@@ -931,19 +921,19 @@ const CourseDetail = () => {
                                   onChange={(e) => !quizSubmitted && handleAnswerSelect(qIdx, e.target.value)}
                                   disabled={quizSubmitted}
                                   placeholder="Type your answer here..."
-                                  className="w-full px-4 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+                                  className="w-full px-4 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:border-amber-500"
                                 />
                               </div>
                             )}
 
                             {/* Explanation Feedback */}
                             {quizSubmitted && (
-                              <div className="mt-3 pt-3 border-t border-zinc-800/60 text-xs space-y-1">
-                                <p className="text-emerald-400 font-bold">
+                              <div className="mt-3 pt-3 border-t border-slate-200 dark:border-zinc-800/60 text-xs space-y-1">
+                                <p className="text-emerald-600 dark:text-emerald-400 font-bold">
                                   ✓ Correct Answer: {q.correct_answer}
                                 </p>
                                 {q.explanation && (
-                                  <p className="text-zinc-400 leading-relaxed italic">
+                                  <p className="text-slate-600 dark:text-zinc-400 leading-relaxed italic">
                                     Explanation: {q.explanation}
                                   </p>
                                 )}
@@ -964,24 +954,24 @@ const CourseDetail = () => {
                         {submittingQuiz ? 'Evaluating Quiz...' : 'Submit Assessment'}
                       </button>
                     ) : (
-                      <div className="p-6 rounded-2xl bg-zinc-900/60 border border-zinc-800 text-center space-y-4">
+                      <div className="p-6 rounded-2xl bg-slate-50 dark:bg-zinc-900/60 border border-slate-200 dark:border-zinc-800 text-center space-y-4">
                         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/30 mx-auto">
-                          <Trophy className="w-8 h-8 text-amber-400" />
+                          <Trophy className="w-8 h-8 text-amber-500" />
                         </div>
                         <div>
-                          <h3 className="text-lg font-bold text-white">Assessment Results</h3>
+                          <h3 className="text-lg font-bold text-slate-900 dark:text-white">Assessment Results</h3>
                           <p
                             className={`text-3xl font-black mt-1 ${
                               quizScore >= 70
-                                ? 'text-emerald-400'
+                                ? 'text-emerald-600 dark:text-emerald-400'
                                 : quizScore >= 50
-                                ? 'text-amber-400'
-                                : 'text-red-400'
+                                ? 'text-amber-600 dark:text-amber-400'
+                                : 'text-red-600 dark:text-red-400'
                             }`}
                           >
                             {quizScore}%
                           </p>
-                          <p className="text-xs text-zinc-400 mt-1">
+                          <p className="text-xs text-slate-600 dark:text-zinc-400 mt-1">
                             {quizScore >= 70
                               ? '🎉 Mastery unlocked! Section marked as completed.'
                               : 'Keep practicing to reinforce the core concepts.'}
@@ -989,7 +979,7 @@ const CourseDetail = () => {
                         </div>
                         <button
                           onClick={resetQuiz}
-                          className="px-5 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-semibold transition-colors cursor-pointer inline-flex items-center gap-2"
+                          className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-800 dark:text-white text-xs font-semibold transition-colors cursor-pointer inline-flex items-center gap-2 border border-slate-200 dark:border-zinc-700 shadow-sm"
                         >
                           <RotateCcw className="w-3.5 h-3.5" />
                           <span>Retake Quiz</span>
@@ -1001,33 +991,33 @@ const CourseDetail = () => {
 
                 {/* ASSIGNMENT SECTION */}
                 {activeSection?.type === 'assignment' && (
-                  <div className="p-6 rounded-2xl bg-zinc-950 border border-zinc-900 space-y-6 shadow-xl">
-                    <div className="flex items-start justify-between border-b border-zinc-900 pb-4">
+                  <div className="p-6 rounded-2xl bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-900 space-y-6 shadow-xl">
+                    <div className="flex items-start justify-between border-b border-slate-200 dark:border-zinc-900 pb-4">
                       <div>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-blue-400 block">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 block">
                           Hands-on Project Lab
                         </span>
-                        <h2 className="text-xl font-bold text-white mt-1">{activeSection.title}</h2>
-                        <p className="text-xs text-zinc-500 mt-1">
+                        <h2 className="text-xl font-bold text-slate-900 dark:text-white mt-1">{activeSection.title}</h2>
+                        <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
                           Apply what you learned through real-world implementation milestones.
                         </p>
                       </div>
-                      <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400">
+                      <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400">
                         <FileText className="w-5 h-5" />
                       </div>
                     </div>
 
                     <div className="space-y-6">
                       {activeSection.content?.assignments?.map((assignment, aIdx) => (
-                        <div key={aIdx} className="p-5 rounded-xl bg-zinc-900/40 border border-zinc-800 space-y-4">
+                        <div key={aIdx} className="p-5 rounded-xl bg-slate-50 dark:bg-zinc-900/40 border border-slate-200 dark:border-zinc-800 space-y-4">
                           <div>
                             <div className="flex items-center justify-between">
-                              <h3 className="text-base font-bold text-white">{assignment.title}</h3>
-                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                              <h3 className="text-base font-bold text-slate-900 dark:text-white">{assignment.title}</h3>
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-bold">
                                 {assignment.difficulty || 'Intermediate'}
                               </span>
                             </div>
-                            <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                            <p className="text-xs text-slate-600 dark:text-zinc-400 mt-1 leading-relaxed">
                               {assignment.description}
                             </p>
                           </div>
@@ -1035,14 +1025,14 @@ const CourseDetail = () => {
                           {/* Task Milestones */}
                           {assignment.tasks?.length > 0 && (
                             <div className="space-y-2">
-                              <h4 className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+                              <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-400">
                                 Mission Objectives
                               </h4>
                               <div className="space-y-1.5">
                                 {assignment.tasks.map((task, tIdx) => (
                                   <div
                                     key={tIdx}
-                                    className="p-3 rounded-lg bg-zinc-950/60 border border-zinc-800/80 text-xs text-zinc-300 flex items-start gap-2.5"
+                                    className="p-3 rounded-lg bg-white dark:bg-zinc-950/60 border border-slate-200 dark:border-zinc-800/80 text-xs text-slate-800 dark:text-zinc-300 flex items-start gap-2.5 shadow-sm"
                                   >
                                     <span className="text-amber-500 font-bold">•</span>
                                     <span>{task}</span>
@@ -1054,17 +1044,17 @@ const CourseDetail = () => {
 
                           {/* Evaluation Criteria */}
                           {assignment.evaluation_criteria?.length > 0 && (
-                            <div className="space-y-2 pt-2 border-t border-zinc-800/60">
-                              <h4 className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+                            <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-zinc-800/60">
+                              <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-400">
                                 Self-Evaluation Rubric
                               </h4>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 {assignment.evaluation_criteria.map((crit, cIdx) => (
                                   <div
                                     key={cIdx}
-                                    className="p-2.5 rounded-lg bg-zinc-900/60 border border-zinc-800 text-[11px] text-zinc-400 flex items-center gap-2"
+                                    className="p-2.5 rounded-lg bg-slate-100/70 dark:bg-zinc-900/60 border border-slate-200 dark:border-zinc-800 text-[11px] text-slate-700 dark:text-zinc-400 flex items-center gap-2"
                                   >
-                                    <Check className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                                    <Check className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 shrink-0" />
                                     <span>{crit}</span>
                                   </div>
                                 ))}
@@ -1079,34 +1069,34 @@ const CourseDetail = () => {
 
                 {/* SUMMARY & RESOURCES SECTION */}
                 {activeSection?.type === 'summary' && (
-                  <div className="p-6 rounded-2xl bg-zinc-950 border border-zinc-900 space-y-6 shadow-xl">
-                    <div className="flex items-start justify-between border-b border-zinc-900 pb-4">
+                  <div className="p-6 rounded-2xl bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-900 space-y-6 shadow-xl">
+                    <div className="flex items-start justify-between border-b border-slate-200 dark:border-zinc-900 pb-4">
                       <div>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-purple-400 block">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-purple-600 dark:text-purple-400 block">
                           Module Summary & Assets
                         </span>
-                        <h2 className="text-xl font-bold text-white mt-1">{activeSection.title}</h2>
+                        <h2 className="text-xl font-bold text-slate-900 dark:text-white mt-1">{activeSection.title}</h2>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => copySummaryText(activeSection.content?.summary || '')}
-                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-xs text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 text-xs text-slate-700 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-white transition-colors cursor-pointer shadow-sm"
                         >
-                          {copiedSummary ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                          {copiedSummary ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
                           <span>{copiedSummary ? 'Copied' : 'Copy'}</span>
                         </button>
-                        <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
+                        <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400">
                           <BookOpen className="w-5 h-5" />
                         </div>
                       </div>
                     </div>
 
                     {/* Synopsis */}
-                    <div className="p-5 rounded-xl bg-zinc-900/40 border border-zinc-800 space-y-2">
-                      <h4 className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+                    <div className="p-5 rounded-xl bg-slate-50 dark:bg-zinc-900/40 border border-slate-200 dark:border-zinc-800 space-y-2">
+                      <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-400">
                         Synopsis Overview
                       </h4>
-                      <p className="text-xs leading-relaxed text-zinc-300 whitespace-pre-line font-normal">
+                      <p className="text-xs leading-relaxed text-slate-700 dark:text-zinc-300 whitespace-pre-line font-normal">
                         {activeSection.content?.summary || 'No summary overview provided.'}
                       </p>
                     </div>
@@ -1114,14 +1104,14 @@ const CourseDetail = () => {
                     {/* Key Takeaways */}
                     {activeSection.content?.key_takeaways?.length > 0 && (
                       <div className="space-y-2">
-                        <h4 className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+                        <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-400">
                           Key Takeaways
                         </h4>
                         <div className="space-y-2">
                           {activeSection.content.key_takeaways.map((item, idx) => (
                             <div
                               key={idx}
-                              className="p-3 rounded-xl bg-zinc-900/30 border border-zinc-800 text-xs text-zinc-300 flex items-start gap-2.5"
+                              className="p-3 rounded-xl bg-slate-50 dark:bg-zinc-900/30 border border-slate-200 dark:border-zinc-800 text-xs text-slate-700 dark:text-zinc-300 flex items-start gap-2.5 shadow-sm"
                             >
                               <span className="text-amber-500 font-bold">•</span>
                               <span className="leading-relaxed">{item}</span>
@@ -1133,8 +1123,8 @@ const CourseDetail = () => {
 
                     {/* External Resources */}
                     {activeSection.content?.resources?.length > 0 && (
-                      <div className="space-y-2 pt-2 border-t border-zinc-800/60">
-                        <h4 className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+                      <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-zinc-800/60">
+                        <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-400">
                           Recommended References & Documentation
                         </h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -1144,19 +1134,19 @@ const CourseDetail = () => {
                               href={res.url}
                               target="_blank"
                               rel="noreferrer"
-                              className="p-3.5 rounded-xl bg-zinc-900/50 border border-zinc-800 hover:border-purple-500/40 text-xs flex items-center justify-between group transition-all"
+                              className="p-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-zinc-900/50 dark:hover:bg-zinc-800/60 border border-slate-200 dark:border-zinc-800 hover:border-purple-400 dark:hover:border-purple-500/40 text-xs flex items-center justify-between group transition-all shadow-sm"
                             >
                               <div className="min-w-0 pr-2">
-                                <p className="font-semibold text-zinc-200 group-hover:text-white truncate">
+                                <p className="font-semibold text-slate-900 dark:text-zinc-200 group-hover:text-purple-600 dark:group-hover:text-white truncate">
                                   {res.title}
                                 </p>
                                 {res.description && (
-                                  <p className="text-[10px] text-zinc-500 truncate mt-0.5">
+                                  <p className="text-[10px] text-slate-500 dark:text-zinc-500 truncate mt-0.5">
                                     {res.description}
                                   </p>
                                 )}
                               </div>
-                              <ExternalLink className="w-4 h-4 text-zinc-500 group-hover:text-purple-400 shrink-0" />
+                              <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-purple-600 dark:text-zinc-500 dark:group-hover:text-purple-400 shrink-0" />
                             </a>
                           ))}
                         </div>
@@ -1169,11 +1159,11 @@ const CourseDetail = () => {
 
             {/* TAB 2: Study Notes & Scratchpad */}
             {activeTab === 'notes' && (
-              <div className="p-6 rounded-2xl bg-zinc-950 border border-zinc-900 space-y-4 shadow-xl">
-                <div className="flex items-center justify-between border-b border-zinc-900 pb-4">
+              <div className="p-6 rounded-2xl bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-900 space-y-4 shadow-xl">
+                <div className="flex items-center justify-between border-b border-slate-200 dark:border-zinc-900 pb-4">
                   <div>
-                    <h2 className="text-lg font-bold text-white">Course Study Notes</h2>
-                    <p className="text-xs text-zinc-500 mt-0.5">
+                    <h2 className="text-lg font-bold text-slate-900 dark:text-white">Course Study Notes</h2>
+                    <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                       Take markdown notes, bookmark timestamps, and capture insights from AI Tutor.
                     </p>
                   </div>
@@ -1181,7 +1171,7 @@ const CourseDetail = () => {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={handleInsertTimestampNote}
-                      className="px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-xs font-semibold text-amber-400 flex items-center gap-1.5 transition-colors cursor-pointer"
+                      className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
                     >
                       <Clock className="w-3.5 h-3.5" />
                       <span>Insert Timestamp</span>
@@ -1189,7 +1179,7 @@ const CourseDetail = () => {
                     <button
                       onClick={handleSaveNotes}
                       disabled={notesSaving}
-                      className="px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-lg shadow-amber-500/10"
+                      className="px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-md shadow-amber-500/15"
                     >
                       {notesSaved ? <Check className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
                       <span>{notesSaving ? 'Saving...' : notesSaved ? 'Saved!' : 'Save Notes'}</span>
@@ -1202,17 +1192,17 @@ const CourseDetail = () => {
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Start taking notes... (Markdown formatting supported: **bold**, - lists, ## headings)"
                   rows={14}
-                  className="w-full p-4 rounded-xl bg-zinc-900/60 border border-zinc-800 text-xs text-zinc-200 placeholder-zinc-500 font-mono leading-relaxed focus:outline-none focus:border-amber-500/50 resize-y"
+                  className="w-full p-4 rounded-xl bg-slate-50 dark:bg-zinc-900/60 border border-slate-200 dark:border-zinc-800 text-xs text-slate-900 dark:text-zinc-200 placeholder-slate-400 dark:placeholder-zinc-500 font-mono leading-relaxed focus:outline-none focus:border-amber-500 resize-y"
                 />
               </div>
             )}
 
             {/* Bottom Navigation Buttons */}
-            <div className="flex items-center justify-between pt-4 border-t border-zinc-800/80">
+            <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-zinc-800/80">
               <button
                 onClick={goToPrevSection}
                 disabled={!prevSection}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-xs font-semibold text-zinc-300 hover:text-white hover:border-zinc-700 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 text-xs font-semibold text-slate-700 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-sm"
               >
                 <ChevronLeft className="w-4 h-4" />
                 <span>Previous Lesson</span>
@@ -1221,7 +1211,7 @@ const CourseDetail = () => {
               <button
                 onClick={goToNextSection}
                 disabled={!nextSection}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold text-xs hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-lg"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold text-xs hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-md shadow-amber-500/20"
               >
                 <span>Next Lesson</span>
                 <ChevronRight className="w-4 h-4" />
@@ -1229,60 +1219,65 @@ const CourseDetail = () => {
             </div>
           </div>
 
-          {/* Sidebar Syllabus Index (4 Cols) */}
-          <div className="lg:col-span-4 rounded-2xl bg-zinc-950 border border-zinc-900 overflow-hidden shadow-xl sticky top-20">
-            <div className="p-4 border-b border-zinc-900 bg-zinc-900/40 flex items-center justify-between">
+          {/* Sidebar Syllabus Index (4 Cols) - Smooth Sticky & Scrolling with 2-Finger Scroll Support */}
+          <div
+            data-lenis-prevent
+            className="lg:col-span-4 rounded-3xl bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-900 overflow-hidden shadow-xl sticky top-20 self-start max-h-[calc(100vh-6.5rem)] flex flex-col z-20 overscroll-contain"
+          >
+            <div className="p-4 border-b border-slate-200 dark:border-zinc-900 bg-slate-50/90 dark:bg-zinc-900/40 flex items-center justify-between shrink-0">
               <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-zinc-300">
                   Course Syllabus
                 </h3>
-                <p className="text-[10px] text-zinc-500 mt-0.5">
+                <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5">
                   {completedSections} / {totalSections} lessons completed
                 </p>
               </div>
-              <span className="text-[10px] font-mono font-bold px-2 py-1 rounded bg-zinc-800 text-amber-400 border border-zinc-700">
+              <span className="text-[10px] font-mono font-bold px-2 py-1 rounded bg-slate-200 dark:bg-zinc-800 text-amber-600 dark:text-amber-400 border border-slate-300 dark:border-zinc-700">
                 {course.modules?.length || 0} Modules
               </span>
             </div>
 
             {/* Modules Accordion */}
-            <div className="divide-y divide-zinc-900 max-h-[calc(100vh-220px)] overflow-y-auto scrollbar-thin">
+            <div
+              data-lenis-prevent
+              className="flex-1 overflow-y-auto divide-y divide-slate-200 dark:divide-zinc-900 scrollbar-thin overscroll-contain touch-pan-y"
+            >
               {course.modules?.map((module, mIdx) => {
                 const isExpanded = !!expandedModules[module.id];
                 const moduleSections = module.sections || [];
-                const moduleCompleted = moduleSections.length > 0 && moduleSections.every((s) => s.completed);
 
                 return (
-                  <div key={module.id || mIdx} className="bg-zinc-950/40">
+                  <div key={module.id || mIdx} className="bg-white dark:bg-zinc-950/40">
                     <button
                       onClick={() => toggleModule(module.id)}
-                      className="w-full p-4 text-left flex items-start justify-between gap-3 hover:bg-zinc-900/40 transition-colors group cursor-pointer"
+                      className="w-full p-4 text-left flex items-start justify-between gap-3 hover:bg-slate-50 dark:hover:bg-zinc-900/40 transition-colors group cursor-pointer"
                     >
                       <div className="min-w-0 space-y-1">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500 block">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-500 block">
                           Module {mIdx + 1}
                         </span>
-                        <h4 className="text-xs font-semibold text-zinc-200 group-hover:text-white line-clamp-2">
+                        <h4 className="text-xs font-semibold text-slate-800 group-hover:text-slate-900 dark:text-zinc-200 dark:group-hover:text-white line-clamp-2">
                           {module.title}
                         </h4>
-                        <div className="flex items-center gap-1.5 text-[10px] text-zinc-500 font-mono">
-                          <Clock className="w-3 h-3 text-zinc-600" />
+                        <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-zinc-400 font-mono">
+                          <Clock className="w-3 h-3 text-slate-400 dark:text-zinc-500" />
                           <span>{renderTimeRange(module.start_time, module.end_time)}</span>
                         </div>
                       </div>
 
-                      <div className="shrink-0 pt-1">
+                      <div className="shrink-0 pt-1 text-slate-400 dark:text-zinc-500">
                         {isExpanded ? (
-                          <ChevronUp className="w-4 h-4 text-zinc-500" />
+                          <ChevronUp className="w-4 h-4" />
                         ) : (
-                          <ChevronDown className="w-4 h-4 text-zinc-500" />
+                          <ChevronDown className="w-4 h-4" />
                         )}
                       </div>
                     </button>
 
                     {/* Sub Sections list */}
                     {isExpanded && (
-                      <div className="bg-zinc-900/20 border-t border-zinc-900/80 divide-y divide-zinc-900/40 pb-1">
+                      <div className="bg-slate-50/60 dark:bg-zinc-900/20 border-t border-slate-200 dark:border-zinc-900/80 divide-y divide-slate-200/80 dark:divide-zinc-900/40 pb-1">
                         {moduleSections.map((section, sIdx) => {
                           const isActive = activeSection?.id === section.id;
                           return (
@@ -1291,8 +1286,8 @@ const CourseDetail = () => {
                               onClick={() => handleSelectSection(module, sIdx, section)}
                               className={`p-3.5 flex items-start gap-3 text-xs transition-all cursor-pointer ${
                                 isActive
-                                  ? 'bg-amber-500/10 border-l-2 border-amber-500 text-white font-medium pl-3.5'
-                                  : 'hover:bg-zinc-900/50 text-zinc-400 hover:text-zinc-200'
+                                  ? 'bg-amber-500/15 border-l-4 border-amber-500 text-slate-900 dark:text-white font-medium pl-3'
+                                  : 'hover:bg-slate-100 dark:hover:bg-zinc-900/50 text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200'
                               }`}
                             >
                               <div
@@ -1300,30 +1295,30 @@ const CourseDetail = () => {
                                   e.stopPropagation();
                                   toggleSectionCompletion(section.id);
                                 }}
-                                className="mt-0.5 shrink-0 text-zinc-500 hover:text-amber-400 transition-colors"
+                                className="mt-0.5 shrink-0 text-slate-400 hover:text-amber-500 dark:text-zinc-500 dark:hover:text-amber-400 transition-colors"
                               >
                                 {section.completed ? (
-                                  <CheckCircle2 className="w-4 h-4 text-green-400" />
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
                                 ) : (
-                                  <Circle className="w-4 h-4 text-zinc-600" />
+                                  <Circle className="w-4 h-4 text-slate-300 dark:text-zinc-600" />
                                 )}
                               </div>
 
                               <div className="min-w-0 flex-1">
                                 <p
                                   className={`line-clamp-2 ${
-                                    isActive ? 'text-zinc-100 font-semibold' : 'text-zinc-300'
-                                  } ${section.completed ? 'line-through text-zinc-600' : ''}`}
+                                    isActive ? 'text-slate-900 dark:text-zinc-100 font-semibold' : 'text-slate-700 dark:text-zinc-300'
+                                  } ${section.completed ? 'line-through text-slate-400 dark:text-zinc-600' : ''}`}
                                 >
                                   {section.title}
                                 </p>
-                                <div className="flex items-center justify-between text-[10px] text-zinc-500 mt-1">
+                                <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-zinc-400 mt-1">
                                   <span className="flex items-center gap-1">
                                     {getSectionIcon(section.type)}
-                                    <span className="uppercase">{section.type}</span>
+                                    <span className="uppercase font-semibold">{section.type}</span>
                                   </span>
                                   {section.start_time !== null && section.start_time !== undefined && (
-                                    <span className="font-mono text-zinc-500">
+                                    <span className="font-mono text-slate-500 dark:text-zinc-400">
                                       @{formatTime(section.start_time)}
                                     </span>
                                   )}
@@ -1359,16 +1354,16 @@ const CourseDetail = () => {
 
       {/* Keyboard Shortcuts HUD */}
       {isShortcutsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-md p-6 rounded-3xl bg-zinc-950 border border-zinc-800 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-zinc-900 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md p-6 rounded-3xl bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-zinc-900 pb-3">
               <div className="flex items-center gap-2">
-                <Keyboard className="w-4 h-4 text-amber-400" />
-                <h3 className="text-sm font-bold text-white">Study Room Keyboard Shortcuts</h3>
+                <Keyboard className="w-4 h-4 text-amber-500" />
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Study Room Keyboard Shortcuts</h3>
               </div>
               <button
                 onClick={() => setIsShortcutsOpen(false)}
-                className="p-1.5 rounded-lg text-zinc-400 hover:text-white transition-colors"
+                className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1381,9 +1376,9 @@ const CourseDetail = () => {
                 { key: 'Space', desc: 'Play / Pause synchronized video' },
                 { key: 'Tab', desc: 'Switch between Content and Notes' },
               ].map((s, idx) => (
-                <div key={idx} className="flex items-center justify-between p-2 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
-                  <span className="text-zinc-300 font-medium">{s.desc}</span>
-                  <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-mono font-bold text-[11px] border border-amber-500/30">
+                <div key={idx} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-900/60 border border-slate-200 dark:border-zinc-800/80">
+                  <span className="text-slate-700 dark:text-zinc-300 font-medium">{s.desc}</span>
+                  <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 font-mono font-bold text-[11px] border border-amber-500/30">
                     {s.key}
                   </span>
                 </div>

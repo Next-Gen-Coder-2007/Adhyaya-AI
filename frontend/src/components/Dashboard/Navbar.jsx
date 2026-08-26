@@ -22,12 +22,12 @@ const NavLink = ({ item, onClick, isActive }) => (
     className={`group flex items-center gap-3 px-3.5 py-2.5 rounded-xl
                transition-all duration-200 text-xs font-semibold cursor-pointer
                ${isActive
-                 ? 'text-white bg-amber-500/15 border border-amber-500/30 font-bold shadow-sm'
-                 : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                 ? 'text-amber-700 dark:text-white bg-amber-500/15 border border-amber-500/30 font-bold shadow-sm'
+                 : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
                }`}
   >
     <item.icon
-      className={`w-4 h-4 transition-colors shrink-0 ${isActive ? 'text-amber-400' : 'text-zinc-500 group-hover:text-amber-400'}`}
+      className={`w-4 h-4 transition-colors shrink-0 ${isActive ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-zinc-500 group-hover:text-amber-600 dark:group-hover:text-amber-400'}`}
     />
     <span>{item.name}</span>
   </Link>
@@ -180,7 +180,7 @@ const Navbar = ({ children }) => {
         </header>
 
         {/* Content Area with Top Padding */}
-        <main className="flex-1 overflow-y-auto px-4 md:px-8 pt-20 pb-10">
+        <main className="flex-1 min-w-0 px-4 md:px-8 pt-20 pb-4">
           {children}
         </main>
       </div>

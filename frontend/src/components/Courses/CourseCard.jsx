@@ -53,15 +53,15 @@ const CourseCard = ({ course, onClick, onCourseUpdated }) => {
   return (
     <div
       onClick={isGenerating || isFailed ? undefined : onClick}
-      className={`group rounded-3xl bg-zinc-950/90 border border-zinc-900 overflow-hidden transition-all duration-300 shadow-xl flex flex-col justify-between ${
+      className={`group rounded-3xl bg-white dark:bg-zinc-950/90 border border-slate-200 dark:border-zinc-900 overflow-hidden transition-all duration-300 shadow-md flex flex-col justify-between ${
         isGenerating || isFailed
           ? 'cursor-default'
-          : 'hover:border-amber-500/40 hover:-translate-y-1.5 hover:shadow-2xl cursor-pointer'
+          : 'hover:border-amber-500/40 hover:-translate-y-1.5 hover:shadow-xl cursor-pointer'
       }`}
     >
       <div>
         {/* Thumbnail Box */}
-        <div className="w-full aspect-video overflow-hidden relative bg-zinc-900">
+        <div className="w-full aspect-video overflow-hidden relative bg-slate-100 dark:bg-zinc-900">
           {thumbnail ? (
             <img
               src={thumbnail}
@@ -80,7 +80,7 @@ const CourseCard = ({ course, onClick, onCourseUpdated }) => {
               }}
             />
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center text-zinc-600 bg-zinc-900">
+            <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 dark:text-zinc-600 bg-slate-100 dark:bg-zinc-900">
               <Film className="w-10 h-10 mb-2 opacity-50 text-amber-500" />
               <span className="text-[11px] font-mono">Interactive Video Course</span>
             </div>
@@ -121,14 +121,14 @@ const CourseCard = ({ course, onClick, onCourseUpdated }) => {
 
         {/* Content Box */}
         <div className="p-5 space-y-2">
-          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-amber-500">
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-500">
             {isGenerating ? (
-              <span className="flex items-center gap-1 text-amber-400 font-semibold animate-pulse">
+              <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-semibold animate-pulse">
                 <Loader2 className="w-3 h-3 animate-spin" />
                 AI Agents Processing
               </span>
             ) : isFailed ? (
-              <span className="text-red-400 font-semibold">Generation Unsuccessful</span>
+              <span className="text-red-600 dark:text-red-400 font-semibold">Generation Unsuccessful</span>
             ) : (
               <>
                 <span>{course.modules?.length || 0} Modules</span>
@@ -138,27 +138,27 @@ const CourseCard = ({ course, onClick, onCourseUpdated }) => {
             )}
           </div>
 
-          <h3 className="text-base font-bold text-white group-hover:text-amber-400 transition-colors line-clamp-2 leading-snug">
+          <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors line-clamp-2 leading-snug">
             {course.title}
           </h3>
 
-          <p className="text-xs text-zinc-400 line-clamp-2 leading-relaxed font-normal">
+          <p className="text-xs text-slate-600 dark:text-zinc-400 line-clamp-2 leading-relaxed font-normal">
             {isFailed ? errorMsg : course.description || 'Interactive course curriculum synthesized with AI.'}
           </p>
         </div>
       </div>
 
       {/* Progress & Bottom Bar */}
-      <div className="px-5 pb-5 pt-2 border-t border-zinc-900/60 mt-auto">
+      <div className="px-5 pb-5 pt-2 border-t border-slate-100 dark:border-zinc-900/60 mt-auto">
         {isGenerating ? (
           <div className="space-y-2">
             <div className="flex items-center justify-between text-[11px]">
-              <span className="text-zinc-400 truncate max-w-[200px] text-[10px]" title={genStep}>
+              <span className="text-slate-500 dark:text-zinc-400 truncate max-w-[200px] text-[10px]" title={genStep}>
                 {genStep}
               </span>
-              <span className="font-bold text-amber-400">{genProgress}%</span>
+              <span className="font-bold text-amber-600 dark:text-amber-400">{genProgress}%</span>
             </div>
-            <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden border border-amber-500/20 relative">
+            <div className="w-full h-2 bg-slate-200 dark:bg-zinc-900 rounded-full overflow-hidden border border-amber-500/20 relative">
               <div
                 className="h-full bg-gradient-to-r from-amber-600 via-amber-400 to-amber-300 transition-all duration-500 rounded-full relative overflow-hidden"
                 style={{ width: `${genProgress}%` }}
@@ -169,11 +169,11 @@ const CourseCard = ({ course, onClick, onCourseUpdated }) => {
           </div>
         ) : isFailed ? (
           <div className="flex items-center justify-between gap-2 pt-1">
-            <span className="text-[11px] text-red-400/80 line-clamp-1">Ready to retry</span>
+            <span className="text-[11px] text-red-600 dark:text-red-400/80 line-clamp-1">Ready to retry</span>
             <button
               onClick={handleRetry}
               disabled={retrying}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs shadow-lg shadow-amber-500/20 transition-all active:scale-95 cursor-pointer shrink-0"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs shadow-md shadow-amber-500/20 transition-all active:scale-95 cursor-pointer shrink-0"
             >
               {retrying ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -186,12 +186,12 @@ const CourseCard = ({ course, onClick, onCourseUpdated }) => {
         ) : (
           <div>
             <div className="flex items-center justify-between text-[11px] mb-1.5">
-              <span className="text-zinc-500 font-medium">
+              <span className="text-slate-500 dark:text-zinc-500 font-medium">
                 {completedSections} of {totalSections} lessons
               </span>
-              <span className="font-bold text-amber-400">{studyProgress}%</span>
+              <span className="font-bold text-amber-600 dark:text-amber-400">{studyProgress}%</span>
             </div>
-            <div className="w-full h-1.5 bg-zinc-900 rounded-full overflow-hidden border border-zinc-800/80">
+            <div className="w-full h-1.5 bg-slate-200 dark:bg-zinc-900 rounded-full overflow-hidden border border-slate-200 dark:border-zinc-800/80">
               <div
                 className="h-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-300 rounded-full"
                 style={{ width: `${studyProgress}%` }}

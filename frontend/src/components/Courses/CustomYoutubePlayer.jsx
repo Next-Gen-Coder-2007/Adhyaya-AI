@@ -229,13 +229,13 @@ const CustomYouTubePlayer = React.memo(({
 
   if (playerError) {
     return (
-      <div className="rounded-2xl bg-zinc-950 border border-zinc-800 p-8 text-center w-full">
-        <p className="text-red-400 text-sm font-medium">{playerError}</p>
+      <div className="rounded-2xl bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 p-8 text-center w-full shadow-sm">
+        <p className="text-red-600 dark:text-red-400 text-sm font-medium">{playerError}</p>
         <button
           onClick={() => {
             setPlayerError(null);
           }}
-          className="mt-3 px-4 py-2 bg-zinc-800 text-white text-xs font-semibold rounded-lg hover:bg-zinc-700 transition-colors"
+          className="mt-3 px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-800 dark:text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer border border-slate-200 dark:border-zinc-700"
         >
           Reload Player
         </button>
@@ -246,7 +246,7 @@ const CustomYouTubePlayer = React.memo(({
   return (
     <div
       ref={containerRef}
-      className="rounded-2xl bg-zinc-950 border border-zinc-800/80 overflow-hidden shadow-2xl transition-all duration-300 w-full"
+      className="rounded-2xl bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800/80 overflow-hidden shadow-xl transition-all duration-300 w-full"
     >
       <div className="aspect-video w-full bg-black relative overflow-hidden">
         <YouTube
@@ -259,10 +259,10 @@ const CustomYouTubePlayer = React.memo(({
         />
       </div>
 
-      <div className="p-4 space-y-3 bg-zinc-950 border-t border-zinc-800/60">
+      <div className="p-4 space-y-3 bg-white dark:bg-zinc-950 border-t border-slate-200 dark:border-zinc-800/60">
         {/* Progress bar */}
         <div
-          className="group relative h-2 bg-zinc-800 rounded-full cursor-pointer overflow-hidden transition-all hover:h-2.5"
+          className="group relative h-2 bg-slate-200 dark:bg-zinc-800 rounded-full cursor-pointer overflow-hidden transition-all hover:h-2.5"
           onClick={handleProgressClick}
         >
           <div
@@ -280,7 +280,7 @@ const CustomYouTubePlayer = React.memo(({
             {/* Play/Pause */}
             <button
               onClick={togglePlayPause}
-              className="p-1.5 rounded-lg text-zinc-300 hover:text-white transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-700 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-white transition-colors cursor-pointer"
               title={isPlaying ? "Pause" : "Play"}
             >
               {isPlaying ? (
@@ -293,14 +293,14 @@ const CustomYouTubePlayer = React.memo(({
             {/* Skips */}
             <button
               onClick={() => skip(-10)}
-              className="p-1 text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
+              className="p-1 text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors cursor-pointer"
               title="Skip back 10s"
             >
               <SkipBack className="w-4 h-4" />
             </button>
             <button
               onClick={() => skip(10)}
-              className="p-1 text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
+              className="p-1 text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors cursor-pointer"
               title="Skip forward 10s"
             >
               <SkipForward className="w-4 h-4" />
@@ -310,7 +310,7 @@ const CustomYouTubePlayer = React.memo(({
             <div className="flex items-center gap-1.5 ml-1">
               <button
                 onClick={toggleMute}
-                className="text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
+                className="text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors cursor-pointer"
               >
                 {isMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
               </button>
@@ -320,14 +320,14 @@ const CustomYouTubePlayer = React.memo(({
                 max={100}
                 value={isMuted ? 0 : volume}
                 onChange={handleVolumeChange}
-                className="w-16 sm:w-20 h-1 bg-zinc-800 rounded-full appearance-none cursor-pointer accent-amber-500"
+                className="w-16 sm:w-20 h-1 bg-slate-200 dark:bg-zinc-800 rounded-full appearance-none cursor-pointer accent-amber-500"
               />
             </div>
 
             {/* Time display */}
-            <div className="text-xs font-mono text-zinc-400 ml-2">
-              <span className="text-zinc-200 font-semibold">{formatTime(currentTime)}</span>
-              <span className="text-zinc-600 mx-1">/</span>
+            <div className="text-xs font-mono text-slate-500 dark:text-zinc-400 ml-2">
+              <span className="text-slate-800 dark:text-zinc-200 font-semibold">{formatTime(currentTime)}</span>
+              <span className="text-slate-400 dark:text-zinc-600 mx-1">/</span>
               <span>{formatTime(duration)}</span>
             </div>
           </div>
@@ -337,20 +337,20 @@ const CustomYouTubePlayer = React.memo(({
             <div className="relative">
               <button
                 onClick={() => setShowSpeedMenu(!showSpeedMenu)}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-900 border border-zinc-800 text-xs font-medium text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 text-xs font-medium text-slate-700 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               >
-                <Gauge className="w-3.5 h-3.5 text-zinc-400" />
+                <Gauge className="w-3.5 h-3.5 text-slate-500 dark:text-zinc-400" />
                 <span>{playbackRate}x</span>
               </button>
 
               {showSpeedMenu && (
-                <div className="absolute bottom-full right-0 mb-2 py-1 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-20 flex flex-col min-w-[80px]">
+                <div className="absolute bottom-full right-0 mb-2 py-1 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-xl z-20 flex flex-col min-w-[80px]">
                   {SPEED_OPTIONS.map((rate) => (
                     <button
                       key={rate}
                       onClick={() => handleSpeedChange(rate)}
-                      className={`px-3 py-1.5 text-xs text-left transition-colors hover:bg-zinc-800 ${
-                        playbackRate === rate ? 'text-amber-400 font-bold' : 'text-zinc-400'
+                      className={`px-3 py-1.5 text-xs text-left transition-colors hover:bg-slate-100 dark:hover:bg-zinc-800 cursor-pointer ${
+                        playbackRate === rate ? 'text-amber-600 dark:text-amber-400 font-bold bg-amber-500/10' : 'text-slate-700 dark:text-zinc-400'
                       }`}
                     >
                       {rate}x
@@ -363,7 +363,7 @@ const CustomYouTubePlayer = React.memo(({
             {/* Fullscreen */}
             <button
               onClick={toggleFullscreen}
-              className="p-1.5 rounded-lg text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-white transition-colors cursor-pointer"
               title="Fullscreen"
             >
               {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
