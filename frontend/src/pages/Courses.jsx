@@ -25,21 +25,33 @@ const Courses = () => {
       ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'
       : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
 
-  const fetchCourses = async () => {
+  const fetchCourses = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const response = await api.get('/courses', { withCredentials: true });
       setCourses(response.data || []);
     } catch (error) {
       console.error('Failed to fetch courses:', error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchCourses();
   }, []);
+
+  // Low-frequency polling for generating courses (client computes smooth 60fps progress locally)
+  useEffect(() => {
+    const hasGenerating = courses.some((c) => c.status === 'generating');
+    let interval;
+    if (hasGenerating) {
+      interval = setInterval(() => {
+        fetchCourses(true);
+      }, 12000);
+    }
+    return () => clearInterval(interval);
+  }, [courses]);
 
   const getSections = (course) => course.modules?.flatMap((m) => m.sections || []) || [];
 
@@ -167,6 +179,7 @@ const Courses = () => {
               <CourseCard
                 key={course.id}
                 course={course}
+                onCourseUpdated={() => fetchCourses(true)}
                 onClick={() => {
                   navigate(`/courses/${course.id}`);
                 }}

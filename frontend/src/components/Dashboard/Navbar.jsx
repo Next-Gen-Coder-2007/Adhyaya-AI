@@ -34,12 +34,10 @@ const NavLink = ({ item, onClick, isActive }) => (
 );
 
 const Navbar = ({ children }) => {
-  const { user, logout, updateSettings } = useAuth();
+  const { user, logout, isDarkMode, toggleDarkMode } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  const isDarkMode = user?.settings?.darkMode !== false;
 
   useEffect(() => {
     if (sidebarOpen) {
@@ -58,10 +56,6 @@ const Navbar = ({ children }) => {
   };
 
   const closeSidebar = () => setSidebarOpen(false);
-
-  const toggleDarkMode = () => {
-    updateSettings({ darkMode: !isDarkMode });
-  };
 
   const navItems = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
