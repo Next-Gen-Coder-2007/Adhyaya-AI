@@ -17,11 +17,14 @@ import {
   Download,
   Award,
   Sparkles,
-  ShieldCheck
+  ShieldCheck,
+  RotateCcw,
 } from 'lucide-react';
 import api from '../../api/axios';
 import Navbar from '../Dashboard/Navbar';
 import CertificateModal from './CertificateModal';
+import { useCourseProgress } from '../../hooks/useCourseProgress';
+import { getCourseThumbnail } from './CourseCard';
 
 const getSectionIcon = (type) => {
   switch (type) {
@@ -68,27 +71,56 @@ const CourseOverview = () => {
   const [isCertModalOpen, setIsCertModalOpen] = useState(false);
   const [loadingCert, setLoadingCert] = useState(false);
 
-  useEffect(() => {
-    const fetchCourseOverview = async () => {
-      try {
-        setLoading(true);
-        const response = await api.get(`/courses/${id}`);
-        const courseData = response.data;
-        setCourse(courseData);
-        if (courseData.modules?.length > 0) {
-          setExpandedModules({ [courseData.modules[0].id]: true });
-        }
-        setError(null);
-      } catch (err) {
-        console.error('Failed to load course overview:', err);
-        setError('Could not retrieve course metrics. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const [retrying, setRetrying] = useState(false);
 
+  const { progress: genProgress, step: genStep } = useCourseProgress(
+    course?.status,
+    course?.created_at || course?.createdAt
+  );
+
+  const fetchCourseOverview = async (silent = false) => {
+    try {
+      if (!silent) setLoading(true);
+      const response = await api.get(`/courses/${id}`);
+      const courseData = response.data;
+      setCourse(courseData);
+      if (courseData.modules?.length > 0) {
+        setExpandedModules({ [courseData.modules[0].id]: true });
+      }
+      setError(null);
+    } catch (err) {
+      console.error('Failed to load course overview:', err);
+      if (!silent) setError('Could not retrieve course metrics. Please try again.');
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchCourseOverview();
   }, [id]);
+
+  useEffect(() => {
+    let interval;
+    if (course?.status === 'generating') {
+      interval = setInterval(() => {
+        fetchCourseOverview(true);
+      }, 10000);
+    }
+    return () => clearInterval(interval);
+  }, [course?.status]);
+
+  const handleRetry = async () => {
+    try {
+      setRetrying(true);
+      await api.post(`/courses/${id}/retry`);
+      await fetchCourseOverview();
+    } catch (err) {
+      console.error('Failed to retry course:', err);
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   const toggleModule = (moduleId) => {
     setExpandedModules((prev) => ({
@@ -147,6 +179,115 @@ const CourseOverview = () => {
           >
             ← Back to Courses
           </button>
+        </div>
+      </Navbar>
+    );
+  }
+
+  // Generating Screen
+  if (course.status === 'generating') {
+
+    return (
+      <Navbar>
+        <div className="flex flex-col items-center justify-center py-20 text-center max-w-lg mx-auto px-4 space-y-6">
+          <div className="w-full relative p-8 rounded-3xl bg-zinc-950/90 border border-amber-500/30 shadow-2xl space-y-6">
+            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mx-auto shadow-lg shadow-amber-500/10">
+              <Sparkles className="w-7 h-7 animate-pulse" />
+            </div>
+
+            <div>
+              <span className="text-[10px] uppercase font-bold tracking-widest text-amber-500 block">
+                LangGraph Agentic Pipeline
+              </span>
+              <h2 className="text-2xl font-extrabold text-white mt-1">
+                {course.title || 'Synthesizing Course'}
+              </h2>
+            </div>
+
+            <div className="space-y-3 bg-zinc-900/60 p-5 rounded-2xl border border-zinc-800/80">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-semibold text-amber-400">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="truncate max-w-[260px] text-left">{genStep}</span>
+                </div>
+                <span className="text-xl font-extrabold text-white font-mono tracking-tight shrink-0 ml-2">
+                  {genProgress}%
+                </span>
+              </div>
+
+              <div className="w-full h-3 bg-zinc-950 rounded-full overflow-hidden border border-amber-500/20 relative shadow-inner">
+                <div
+                  className="h-full bg-gradient-to-r from-amber-600 via-amber-500 to-amber-300 transition-all duration-500 rounded-full relative overflow-hidden"
+                  style={{ width: `${genProgress}%` }}
+                >
+                  <div className="absolute inset-0 bg-white/25 animate-[shimmer_1.5s_infinite] -skew-x-12" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={() => navigate('/courses')}
+            className="px-5 py-2.5 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-300 text-xs font-semibold rounded-xl hover:text-white transition-all cursor-pointer"
+          >
+            ← Return to All Courses
+          </button>
+        </div>
+      </Navbar>
+    );
+  }
+
+  // Failed Screen
+  if (course.status === 'failed') {
+    const errorMsg = course.error_message || course.errorMessage || 'Could not extract video content or transcripts. Ensure video has captions or try another link.';
+
+    return (
+      <Navbar>
+        <div className="flex flex-col items-center justify-center py-20 text-center max-w-lg mx-auto px-4 space-y-6">
+          <div className="w-full relative p-8 rounded-3xl bg-zinc-950/90 border border-red-900/40 shadow-2xl space-y-5">
+            <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400 mx-auto shadow-lg shadow-red-500/10">
+              <AlertCircle className="w-7 h-7" />
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-[10px] uppercase font-bold tracking-widest text-red-400 block">
+                Synthesis Unsuccessful
+              </span>
+              <h2 className="text-2xl font-extrabold text-white">Course Generation Failed</h2>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-red-950/20 border border-red-900/30 text-xs text-zinc-300 leading-relaxed text-left">
+              <p className="font-semibold text-red-300 mb-1">Reason:</p>
+              <p className="text-zinc-400">{errorMsg}</p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              <button
+                onClick={handleRetry}
+                disabled={retrying}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-extrabold text-xs shadow-lg shadow-amber-500/25 transition-all active:scale-95 cursor-pointer"
+              >
+                {retrying ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Restarting Pipeline...</span>
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="w-4 h-4" />
+                    <span>Try Again / Retry Generation</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => navigate('/courses')}
+                className="w-full sm:w-auto px-5 py-3 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-300 text-xs font-semibold rounded-2xl hover:text-white transition-all cursor-pointer"
+              >
+                Return to Courses
+              </button>
+            </div>
+          </div>
         </div>
       </Navbar>
     );
@@ -247,21 +388,31 @@ const CourseOverview = () => {
 
             {/* Thumbnail and Start Button */}
             <div className="w-full lg:w-72 space-y-4 shrink-0">
-              {course.image_url && (
-                <div className="aspect-video rounded-2xl overflow-hidden border border-[var(--border)] relative group shadow-xl">
-                  <img
-                    src={course.image_url}
-                    alt={course.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    onError={(e) => {
-                      e.target.src = 'https://placehold.co/600x400?text=Course+Preview';
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Play className="w-10 h-10 text-amber-400 fill-current" />
+              {(() => {
+                const thumb = getCourseThumbnail(course);
+                if (!thumb) return null;
+                return (
+                  <div className="aspect-video rounded-2xl overflow-hidden border border-[var(--border)] relative group shadow-xl">
+                    <img
+                      src={thumb}
+                      alt={course.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      onError={(e) => {
+                        const target = course?.video_url || course?.youtube_url || course?.videoUrl || '';
+                        const match = target.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
+                        if (match && match[1] && !e.target.src.includes('mqdefault')) {
+                          e.target.src = `https://img.youtube.com/vi/${match[1]}/mqdefault.jpg`;
+                        } else {
+                          e.target.src = 'https://placehold.co/600x400?text=Course+Preview';
+                        }
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Play className="w-10 h-10 text-amber-400 fill-current" />
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               <button
                 onClick={() => navigate(`/courses/${id}/learn`)}
