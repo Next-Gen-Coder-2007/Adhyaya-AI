@@ -24,16 +24,38 @@ app.use((req, res, next) => {
   next();
 });
 
-// Dynamic CORS Configuration
+// Dynamic CORS Configuration supporting CLIENT_URL and Vercel cloud deployments
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, or same-origin)
+      // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
       if (!origin) return callback(null, true);
-      if (env.ALLOWED_ORIGINS.includes('*') || env.ALLOWED_ORIGINS.includes(origin)) {
+
+      // Check allowed origins list
+      if (
+        env.ALLOWED_ORIGINS.includes('*') ||
+        env.ALLOWED_ORIGINS.includes(origin) ||
+        origin.endsWith('.vercel.app')
+      ) {
         return callback(null, true);
       }
-      return callback(null, true); // Permissive cloud origin fallback
+
+      // Check configured CLIENT_URL
+      try {
+        if (env.CLIENT_URL) {
+          const clientHost = new URL(
+            env.CLIENT_URL.startsWith('http') ? env.CLIENT_URL : `https://${env.CLIENT_URL}`
+          ).origin;
+          if (clientHost === origin) {
+            return callback(null, true);
+          }
+        }
+      } catch {
+        // ignore url parse error
+      }
+
+      // Cloud permissive fallback
+      return callback(null, true);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

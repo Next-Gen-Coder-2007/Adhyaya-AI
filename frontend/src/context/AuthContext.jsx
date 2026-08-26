@@ -98,8 +98,11 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const loginAuth = async (endpoint, payload) => {
-    await api.post(endpoint, payload);
-    const res = await api.get("/auth/me");
+    const resAuth = await api.post(endpoint, payload);
+    if (resAuth.data?.token) {
+      localStorage.setItem('adhyaya_token', resAuth.data.token);
+    }
+    const res = await api.get('/auth/me');
     setUser(res.data);
     if (res.data?.settings) {
       const merged = { ...settings, ...res.data.settings };
@@ -109,7 +112,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
-    await api.post("/auth/logout");
+    try {
+      await api.post('/auth/logout');
+    } catch {
+      // ignore
+    }
+    localStorage.removeItem('adhyaya_token');
     setUser(null);
   };
 

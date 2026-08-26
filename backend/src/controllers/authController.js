@@ -9,10 +9,11 @@ function createToken(payload) {
 }
 
 function setAuthCookie(res, token) {
+  const isProd = env.NODE_ENV === 'production' || Boolean(process.env.VERCEL);
   res.cookie('access_token', token, {
     httpOnly: true,
-    sameSite: 'lax',
-    secure: env.NODE_ENV === 'production',
+    sameSite: isProd ? 'none' : 'lax',
+    secure: isProd,
     maxAge: env.ACCESS_TOKEN_EXPIRE_DAYS * 24 * 60 * 60 * 1000,
   });
 }
@@ -67,7 +68,7 @@ export async function login(req, res) {
     const token = createToken({ sub: user.email });
     setAuthCookie(res, token);
 
-    return res.status(200).json({ message: 'Login success' });
+    return res.status(200).json({ message: 'Login success', token, user: user.toJSON() });
   } catch (err) {
     console.error('[LOGIN ERROR]', err);
     return res.status(500).json({ detail: err.message || 'Internal Server Error' });
@@ -106,7 +107,7 @@ export async function googleLogin(req, res) {
     const token = createToken({ sub: user.email });
     setAuthCookie(res, token);
 
-    return res.status(200).json({ message: 'Google login success' });
+    return res.status(200).json({ message: 'Google login success', token, user: user.toJSON() });
   } catch (err) {
     console.error('[GOOGLE LOGIN ERROR]', err);
     return res.status(500).json({ detail: err.message || 'Google OAuth failed' });

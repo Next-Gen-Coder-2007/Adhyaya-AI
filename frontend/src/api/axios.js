@@ -1,16 +1,33 @@
-import axios from "axios";
-import { showGlobalToast } from "../context/ToastContext";
+import axios from 'axios';
+import { showGlobalToast } from '../context/ToastContext';
+
+// Support VITE_API_URL, VITE_API_BASE_URL, or local fallback
+const rawUrl =
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
+  'http://localhost:8000';
+
+const sanitizedBaseURL = rawUrl.replace(/\/+$/, '');
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "http://localhost:8000",
+  baseURL: sanitizedBaseURL,
   withCredentials: true,
+});
+
+// Attach Authorization Bearer token header if present in localStorage
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('adhyaya_token');
+  if (token && !config.headers.Authorization) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     const config = error.config || {};
-    
+
     // Allow caller to suppress automatic global toast (e.g. background polling checks)
     if (!config.skipToast && !config.silent) {
       const status = error.response?.status;
