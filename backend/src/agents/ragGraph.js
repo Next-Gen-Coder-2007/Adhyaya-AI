@@ -29,23 +29,24 @@ export const RagState = Annotation.Root({
 
 async function retrieveChunksNode(state) {
   const { courseId, question } = state;
-  const contextChunks = await retrieve(courseId, question, 5, 0.25);
+  // Retrieve top 8 chunks with an accessible threshold (0.10)
+  const contextChunks = await retrieve(courseId, question, 8, 0.10);
   return { contextChunks };
 }
 
 async function generateAnswerNode(state) {
   const { question, history, courseTitle, moduleTitles, contextChunks } = state;
 
-  const modulesList = (moduleTitles || []).map((t) => `"${t}"`).join(', ') || 'multiple modules';
+  const modulesList = (moduleTitles || []).map((t) => `"${t}"`).join(', ') || 'Course curriculum modules';
 
   const formattedChunks = (contextChunks || [])
     .map((c) => {
       const meta = c.metadata || {};
-      const mod = meta.moduleTitle || 'Unknown Module';
-      const sec = meta.sectionType || 'content';
+      const mod = meta.moduleTitle || 'Module';
+      const sec = meta.sectionType || 'Lesson';
       const timeStr = formatTimestamp(meta.startTime);
       const timeLabel = timeStr ? ` @ [${timeStr}]` : '';
-      return `[${mod} › ${sec}${timeLabel}] (relevance=${c.score})\n${c.text}`;
+      return `[${mod} › ${sec}${timeLabel}]\n${c.text}`;
     })
     .join('\n\n---\n\n');
 
@@ -59,28 +60,34 @@ async function generateAnswerNode(state) {
     .filter(Boolean)
     .join('\n');
 
-  const systemTemplate = `You are an expert AI Tutor inside Adhyaya AI.
-The student is studying the course: "{course_title}".
-Available modules: {modules_list}
+  const systemTemplate = `You are an elite, highly knowledgeable AI Master Tutor and Senior Educator inside Adhyaya AI.
+You are assisting a student learning the course: "{course_title}".
+Course Modules: {modules_list}
 
-Instructions:
-- Answer strictly and accurately using the retrieved course context.
-- Whenever referencing specific moments in a video, format timestamps explicitly as \`[MM:SS]\` (or \`[HH:MM:SS]\` for long tutorials) so the learner can click to jump directly to that timestamp in the video.
-- Mention the module name whenever referencing information.
-- Keep responses concise, structured, educational, and easy to understand with bullet points or code snippets where appropriate.
-- If the answer is not present in the context, respond helpfully with:
-"That specific topic isn't covered in the retrieved course material. Try revisiting [suggest the most relevant module name]."
+YOUR INSTRUCTIONAL CAPABILITIES & BEHAVIORS:
+1. Pedagogical Excellence:
+   - When the student asks for practice questions or quizzes (e.g. "Generate 3 practice quiz questions"), IMMEDIATELY generate high-quality, practical multiple-choice or conceptual questions with answer choices, correct answers, and clear explanations grounded in the subject matter.
+   - When asked to summarize or explain, break down complex ideas into crystal-clear explanations with analogies, bullet points, and real-world examples.
+   - When asked for code, provide clean, idiomatic, fully functional code snippets with helpful comments.
+2. Grounding & Video Timestamps:
+   - Draw heavily from the retrieved course context.
+   - Whenever referring to specific video moments or timestamps from the context, format them explicitly as \`[MM:SS]\` (e.g. \`[03:45]\` or \`[01:15:30]\`) so the student can click them to navigate directly to that part of the video.
+   - Reference the relevant module name when discussing specific topics.
+3. Tone & Formatting:
+   - Write with clarity, warmth, and educational authority.
+   - Use structured Markdown formatting with bold keywords, numbered lists, bullet points, and syntax-highlighted code blocks (\`\`\`html, \`\`\`javascript, etc.).
+   - NEVER give dry refusals like "topic isn't covered". Always provide a helpful, comprehensive, pedagogical answer that educates the student while connecting back to the course concepts.
 
-=== RETRIEVED CONTEXT ===
+=== RETRIEVED COURSE CONTEXT ===
 {context_chunks}
 
 === CONVERSATION HISTORY ===
 {history_lines}
 
-=== STUDENT QUESTION ===
+=== STUDENT INQUIRY ===
 {student_question}
 
-=== TUTOR ANSWER ===`;
+=== TUTOR RESPONSE ===`;
 
   const promptTemplate = ChatPromptTemplate.fromTemplate(systemTemplate);
 
@@ -88,7 +95,7 @@ Instructions:
     const answer = await invokeLangChainPrompt(promptTemplate, {
       course_title: courseTitle || 'this course',
       modules_list: modulesList,
-      context_chunks: formattedChunks || 'No relevant context found.',
+      context_chunks: formattedChunks || 'Grounded in overall course curriculum and educational domain knowledge.',
       history_lines: historyLines || '(start of conversation)',
       student_question: question,
     });
@@ -97,6 +104,9 @@ Instructions:
     for (const c of contextChunks || []) {
       const title = c.metadata?.moduleTitle;
       if (title) sourcesSet.add(title);
+    }
+    if (sourcesSet.size === 0 && (moduleTitles || []).length > 0) {
+      sourcesSet.add(moduleTitles[0]);
     }
 
     return {

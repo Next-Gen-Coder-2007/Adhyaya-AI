@@ -11,6 +11,16 @@ import courseRoutes from './src/routes/courseRoutes.js';
 
 const app = express();
 
+// Disable ETags and force fresh 200 OK status on all API responses
+app.set('etag', false);
+app.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('Surrogate-Control', 'no-store');
+  next();
+});
+
 // Telemetry & Process Time Middleware
 app.use((req, res, next) => {
   const start = Date.now();

@@ -183,6 +183,28 @@ export async function updateCourse(req, res) {
   }
 }
 
+export async function updateCourseNotes(req, res) {
+  try {
+    const courseId = req.params.id;
+    const { notes } = req.body;
+
+    const course = await Course.findOneAndUpdate(
+      { _id: courseId, userId: req.user._id },
+      { $set: { notes: typeof notes === 'string' ? notes : '' } },
+      { new: true }
+    );
+
+    if (!course) {
+      return res.status(404).json({ detail: 'Course not found' });
+    }
+
+    return res.status(200).json({ notes: course.notes, message: 'Notes saved successfully' });
+  } catch (err) {
+    console.error('[UPDATE NOTES ERROR]', err);
+    return res.status(500).json({ detail: err.message || 'Failed to save notes' });
+  }
+}
+
 export async function deleteCourse(req, res) {
   try {
     const courseId = req.params.id;

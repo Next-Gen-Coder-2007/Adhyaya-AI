@@ -5,6 +5,7 @@ import {
   getUserCourses,
   getCourseDetail,
   updateCourse,
+  updateCourseNotes,
   deleteCourse,
   exportCourseMarkdown,
   getCourseCertificate,
@@ -22,6 +23,8 @@ router.post('/:id/retry', requireAuth, retryCourse);
 router.get('', requireAuth, getUserCourses);
 router.get('/:id', requireAuth, getCourseDetail);
 router.patch('/:id', requireAuth, updateCourse);
+router.put('/:id/notes', requireAuth, updateCourseNotes);
+router.patch('/:id/notes', requireAuth, updateCourseNotes);
 router.delete('/:id', requireAuth, deleteCourse);
 
 // Export & Certificates
