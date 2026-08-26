@@ -5,7 +5,7 @@ import Loader from "../components/Loader";
 
 const AuthContext = createContext();
 
-const THEME_COLORS = {
+export const THEME_COLORS = {
   amber:  '#f59e0b',
   blue:   '#3b82f6',
   green:  '#22c55e',
@@ -13,10 +13,38 @@ const THEME_COLORS = {
   pink:   '#ec4899',
 };
 
-const FONT_SIZES = {
+export const FONT_SIZES = {
   small:  '14px',
   medium: '16px',
   large:  '18px',
+};
+
+export const FONT_FAMILIES = {
+  inter: {
+    name: 'Inter',
+    category: 'Clean Sans',
+    value: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  },
+  outfit: {
+    name: 'Outfit',
+    category: 'Geometric Tech',
+    value: "'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  },
+  jakarta: {
+    name: 'Plus Jakarta Sans',
+    category: 'Modern Editorial',
+    value: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  },
+  poppins: {
+    name: 'Poppins',
+    category: 'Friendly Rounded',
+    value: "'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  },
+  jetbrains: {
+    name: 'JetBrains Mono',
+    category: 'Developer Code',
+    value: "'JetBrains Mono', monospace",
+  },
 };
 
 const getInitialSettings = () => {
@@ -26,7 +54,7 @@ const getInitialSettings = () => {
   } catch (e) {
     // ignore
   }
-  return { darkMode: true, themeColor: "amber", fontSize: "medium", layoutMode: "grid" };
+  return { darkMode: true, themeColor: "amber", fontSize: "medium", layoutMode: "grid", fontFamily: "inter" };
 };
 
 export const applyThemeToDOM = (settings) => {
@@ -43,7 +71,14 @@ export const applyThemeToDOM = (settings) => {
   root.setAttribute("data-font-size", fontSize);
   root.style.fontSize = FONT_SIZES[fontSize] || '16px';
 
-  // 3. Dark/Light mode
+  // 3. Font Family
+  const fontKey = settings.fontFamily || "inter";
+  const fontObj = FONT_FAMILIES[fontKey] || FONT_FAMILIES.inter;
+  root.setAttribute("data-font-family", fontKey);
+  root.style.setProperty('--font-primary', fontObj.value);
+  document.body.style.fontFamily = fontObj.value;
+
+  // 4. Dark/Light mode
   const isDark = settings.darkMode !== false;
   if (isDark) {
     root.classList.add("dark");
