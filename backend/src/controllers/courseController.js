@@ -5,7 +5,7 @@ import { embedCourse, deleteCourseEmbeddings } from '../services/embeddingServic
 import { chatWithRAG } from '../agents/chatAgent.js';
 import { exportCourseToMarkdown } from '../services/markdownService.js';
 
-// Asynchronous background synthesis worker (Zero intermediate DB spam)
+// Asynchronous background synthesis worker
 async function generateCourseModulesTask(courseId, youtubeUrl, isPlaylist = false) {
   try {
     const course = await Course.findById(courseId);
@@ -15,20 +15,36 @@ async function generateCourseModulesTask(courseId, youtubeUrl, isPlaylist = fals
       course.title,
       course.description,
       youtubeUrl,
-      isPlaylist
+      isPlaylist,
+      async (pct, step) => {
+        try {
+          await Course.findByIdAndUpdate(courseId, {
+            $set: { progress: pct, progressStep: step },
+          });
+        } catch {
+          // ignore progress update errors
+        }
+      }
     );
 
     if (!result || !result.modules || result.modules.length === 0) {
       course.status = 'failed';
       course.progress = 0;
       course.errorMessage =
-        'Could not extract video content or transcripts. Ensure the video has public captions or try another link.';
+        'Could not generate curriculum modules for this course. Please verify the URL or try another link.';
       await course.save();
       return;
     }
 
-    if (result.title) course.title = result.title;
-    if (result.description) course.description = result.description;
+    if (result.title && (!course.title || course.title === 'Interactive Course Track')) {
+      course.title = result.title;
+    }
+    if (result.description) {
+      course.description = result.description;
+    }
+    if (result.imageUrl && (!course.imageUrl || course.imageUrl.includes('/vi/default/'))) {
+      course.imageUrl = result.imageUrl;
+    }
 
     course.modules = result.modules;
     course.status = 'completed';
@@ -36,16 +52,17 @@ async function generateCourseModulesTask(courseId, youtubeUrl, isPlaylist = fals
     course.progressStep = 'Course curriculum ready!';
     course.errorMessage = null;
 
-    // Single atomic database save on completion
+    // Save final course state
     await course.save();
 
     // Asynchronously embed course into vector store
     try {
       await embedCourse(course._id, course.title, course.modules);
     } catch {
-      // ignore
+      // ignore vector indexing failure
     }
   } catch (err) {
+    console.error('[COURSE GENERATION TASK ERROR]', err);
     try {
       const course = await Course.findById(courseId);
       if (course) {
