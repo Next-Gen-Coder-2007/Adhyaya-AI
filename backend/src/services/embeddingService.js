@@ -233,12 +233,40 @@ export async function embedCourse(courseId, courseTitle, modules) {
       }
     }
 
+    // Fallback: If no section texts were long enough, create a summary chunk from course & module titles
+    if (records.length === 0 && courseTitle) {
+      const fallbackText = `${courseTitle}. ${(modules || []).map((m) => m.title || '').filter(Boolean).join('. ')}`;
+      const rawEmbedding = await embedText(fallbackText);
+      const embedding = Array.isArray(rawEmbedding) && rawEmbedding.length === 768
+        ? rawEmbedding.map((v) => (Number.isFinite(v) ? Number(v) : 0))
+        : new Array(768).fill(0);
+
+      records.push({
+        id: `${courseId}_fallback_0`,
+        values: embedding,
+        metadata: {
+          courseId: String(courseId),
+          moduleId: '0',
+          sectionId: '0',
+          text: fallbackText,
+          courseTitle: courseTitle || '',
+          moduleTitle: 'Overview',
+          sectionTitle: 'Course Summary',
+          sectionType: 'summary',
+          startTime: 0,
+          endTime: 0,
+        },
+      });
+    }
+
     if (records.length > 0) {
-      // Upsert in batches of 100
+      // Upsert in batches of 100 with Pinecone SDK v8 { records } format
       const batchSize = 100;
       for (let i = 0; i < records.length; i += batchSize) {
         const batch = records.slice(i, i + batchSize);
-        await ns.upsert(batch);
+        if (batch.length > 0) {
+          await ns.upsert({ records: batch });
+        }
       }
       console.log(`[PINECONE] Successfully indexed ${records.length} chunks for course ${courseId}`);
     }
