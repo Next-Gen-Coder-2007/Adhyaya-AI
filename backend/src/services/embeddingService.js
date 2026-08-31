@@ -1,18 +1,52 @@
+import { Pinecone } from '@pinecone-database/pinecone';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { Chunk } from '../models/Chunk.js';
 import { env } from '../config/env.js';
 
 let geminiClient = null;
+let pineconeClient = null;
+let pineconeIndex = null;
+
+function getGeminiApiKey() {
+  return env.GOOGLE_API_KEY && env.GOOGLE_API_KEY.startsWith('AIzaSy')
+    ? env.GOOGLE_API_KEY
+    : env.YOUTUBE_API_KEY && env.YOUTUBE_API_KEY.startsWith('AIzaSy')
+    ? env.YOUTUBE_API_KEY
+    : env.GOOGLE_API_KEY;
+}
 
 function getGeminiClient() {
-  if (!geminiClient && env.GOOGLE_API_KEY) {
-    geminiClient = new GoogleGenerativeAI(env.GOOGLE_API_KEY);
+  if (!geminiClient) {
+    const key = getGeminiApiKey();
+    if (key) {
+      geminiClient = new GoogleGenerativeAI(key.trim());
+    }
   }
   return geminiClient;
 }
 
-// Lightweight hash-based TF-IDF vectorizer fallback (0MB RAM, no external deps, zero prototype pollution)
-function simpleTfEmbed(text, dim = 128) {
+export function getPineconeIndex() {
+  if (!env.PINECONE_API_KEY) {
+    return null;
+  }
+  if (!pineconeClient) {
+    try {
+      pineconeClient = new Pinecone({
+        apiKey: env.PINECONE_API_KEY.trim(),
+      });
+    } catch (err) {
+      console.error(`[PINECONE CLIENT INIT ERROR] ${err.message}`);
+      return null;
+    }
+  }
+  if (!pineconeIndex && pineconeClient) {
+    const indexName = env.PINECONE_INDEX || 'adhyaya-ai';
+    pineconeIndex = pineconeClient.index(indexName);
+  }
+  return pineconeIndex;
+}
+
+// Lightweight hash-based TF-IDF vectorizer fallback (768 dimensions)
+function simpleTfEmbed(text, dim = 768) {
   const tokens = (text.toLowerCase().match(/\w+/g) || []);
   const vec = new Array(dim).fill(0);
   if (!tokens.length) return vec;
@@ -37,11 +71,11 @@ function simpleTfEmbed(text, dim = 128) {
 }
 
 export async function embedText(text) {
-  if (!text || !text.trim()) return new Array(128).fill(0);
+  if (!text || !text.trim()) return new Array(768).fill(0);
 
   const client = getGeminiClient();
   if (client) {
-    for (const modelName of ['embedding-001', 'text-embedding-004']) {
+    for (const modelName of ['text-embedding-004', 'embedding-001']) {
       try {
         const model = client.getGenerativeModel({ model: modelName });
         const result = await model.embedContent(text);
@@ -50,12 +84,12 @@ export async function embedText(text) {
           if (numbers.length > 0) return numbers;
         }
       } catch {
-        // try next
+        // try next model
       }
     }
   }
 
-  return simpleTfEmbed(text);
+  return simpleTfEmbed(text, 768);
 }
 
 export function cosineSimilarity(v1, v2) {
@@ -138,12 +172,28 @@ function extractSectionText(section) {
   return parts.join(' ').trim();
 }
 
+/**
+ * Embed all module sections of a course and upsert vectors directly to Pinecone.
+ * Each course uses its own namespace (`courseId`) inside the Pinecone Index.
+ */
 export async function embedCourse(courseId, courseTitle, modules) {
   try {
-    // Remove prior chunks for this course
-    await Chunk.deleteMany({ courseId });
+    const index = getPineconeIndex();
+    if (!index) {
+      console.warn('[PINECONE] PINECONE_API_KEY not configured. Skipping vector upsert.');
+      return;
+    }
 
-    const chunkDocs = [];
+    const ns = index.namespace(String(courseId));
+
+    // Clear any previous vectors for this course namespace before re-embedding
+    try {
+      await ns.deleteAll();
+    } catch {
+      // Namespace might be empty or new, safe to ignore
+    }
+
+    const records = [];
 
     for (let mIdx = 0; mIdx < (modules || []).length; mIdx++) {
       const module = modules[mIdx];
@@ -156,70 +206,107 @@ export async function embedCourse(courseId, courseTitle, modules) {
         if (sectionText.split(/\s+/).length < 6) continue;
 
         const textChunks = chunkText(sectionText);
-        for (const text of textChunks) {
+        for (let cIdx = 0; cIdx < textChunks.length; cIdx++) {
+          const text = textChunks[cIdx];
           const rawEmbedding = await embedText(text);
-          const embedding = Array.isArray(rawEmbedding)
+          const embedding = Array.isArray(rawEmbedding) && rawEmbedding.length === 768
             ? rawEmbedding.map((v) => (Number.isFinite(v) ? Number(v) : 0))
-            : new Array(128).fill(0);
+            : new Array(768).fill(0);
 
-          chunkDocs.push({
-            courseId,
-            moduleId: module.id || String(mIdx),
-            sectionId: section.id || String(sIdx),
-            text,
-            embedding,
+          records.push({
+            id: `${courseId}_m${mIdx}_s${sIdx}_c${cIdx}`,
+            values: embedding,
             metadata: {
+              courseId: String(courseId),
+              moduleId: String(module.id || mIdx),
+              sectionId: String(section.id || sIdx),
+              text,
               courseTitle: courseTitle || '',
               moduleTitle,
               sectionTitle: section.title || '',
               sectionType: section.type || 'video',
-              startTime: section.startTime || section.start_time || 0,
-              endTime: section.endTime || section.end_time || 0,
+              startTime: Number(section.startTime || section.start_time || 0),
+              endTime: Number(section.endTime || section.end_time || 0),
             },
           });
         }
       }
     }
 
-    if (chunkDocs.length > 0) {
-      await Chunk.insertMany(chunkDocs);
+    if (records.length > 0) {
+      // Upsert in batches of 100
+      const batchSize = 100;
+      for (let i = 0; i < records.length; i += batchSize) {
+        const batch = records.slice(i, i + batchSize);
+        await ns.upsert(batch);
+      }
+      console.log(`[PINECONE] Successfully indexed ${records.length} chunks for course ${courseId}`);
     }
   } catch (err) {
-    console.error(`[EMBEDDING ERROR] Failed to embed course ${courseId}: ${err.message}`);
+    console.error(`[PINECONE EMBED ERROR] Failed to embed course ${courseId}: ${err.message}`);
   }
 }
 
-export async function retrieve(courseId, question, topK = 5, scoreThreshold = 0.25) {
+/**
+ * Retrieve the top relevant course context chunks from Pinecone.
+ */
+export async function retrieve(courseId, question, topK = 8, scoreThreshold = 0.10) {
   try {
-    const questionEmbedding = await embedText(question);
-    const chunks = await Chunk.find({ courseId }).lean();
-
-    if (!chunks || !chunks.length) return [];
-
-    const scored = [];
-    for (const chunk of chunks) {
-      const sim = cosineSimilarity(questionEmbedding, chunk.embedding);
-      if (sim >= scoreThreshold) {
-        scored.push({
-          text: chunk.text,
-          metadata: chunk.metadata,
-          score: Math.round(sim * 1000) / 1000,
-        });
-      }
+    const index = getPineconeIndex();
+    if (!index) {
+      console.warn('[PINECONE] PINECONE_API_KEY not configured. Cannot retrieve context.');
+      return [];
     }
 
-    scored.sort((a, b) => b.score - a.score);
-    return scored.slice(0, topK);
+    const questionEmbedding = await embedText(question);
+    const ns = index.namespace(String(courseId));
+
+    const queryResponse = await ns.query({
+      vector: questionEmbedding,
+      topK,
+      includeMetadata: true,
+    });
+
+    if (!queryResponse || !queryResponse.matches || !queryResponse.matches.length) {
+      return [];
+    }
+
+    const scored = queryResponse.matches
+      .filter((match) => (match.score ?? 0) >= scoreThreshold)
+      .map((match) => ({
+        text: match.metadata?.text || '',
+        metadata: {
+          courseId: match.metadata?.courseId || String(courseId),
+          moduleId: match.metadata?.moduleId || '',
+          sectionId: match.metadata?.sectionId || '',
+          courseTitle: match.metadata?.courseTitle || '',
+          moduleTitle: match.metadata?.moduleTitle || '',
+          sectionTitle: match.metadata?.sectionTitle || '',
+          sectionType: match.metadata?.sectionType || 'video',
+          startTime: Number(match.metadata?.startTime || 0),
+          endTime: Number(match.metadata?.endTime || 0),
+        },
+        score: Math.round((match.score ?? 0) * 1000) / 1000,
+      }));
+
+    return scored;
   } catch (err) {
-    console.error(`[RETRIEVE ERROR] Failed to retrieve chunks: ${err.message}`);
+    console.error(`[PINECONE RETRIEVE ERROR] Failed to retrieve chunks: ${err.message}`);
     return [];
   }
 }
 
+/**
+ * Delete all chunk embeddings for a specific course namespace from Pinecone.
+ */
 export async function deleteCourseEmbeddings(courseId) {
   try {
-    await Chunk.deleteMany({ courseId });
+    const index = getPineconeIndex();
+    if (!index) return;
+    const ns = index.namespace(String(courseId));
+    await ns.deleteAll();
+    console.log(`[PINECONE] Purged vectors for course namespace: ${courseId}`);
   } catch (err) {
-    console.warn(`[EMBEDDING DELETE WARNING] ${err.message}`);
+    console.warn(`[PINECONE DELETE WARNING] ${err.message}`);
   }
 }

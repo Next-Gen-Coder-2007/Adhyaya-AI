@@ -53,6 +53,10 @@ export const env = {
   YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY || '',
   GOOGLE_URL: process.env.GOOGLE_URL || 'https://www.googleapis.com/oauth2/v3/userinfo',
 
+  // Vector Database (Pinecone)
+  PINECONE_API_KEY: process.env.PINECONE_API_KEY || '',
+  PINECONE_INDEX: process.env.PINECONE_INDEX || 'adhyaya-ai',
+
   // CORS
   ALLOWED_ORIGINS: Array.from(new Set([...defaultOrigins, ...customOrigins])),
 };
