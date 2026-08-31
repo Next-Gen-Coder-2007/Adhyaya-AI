@@ -6,13 +6,14 @@
 
 <p align="center">
   <strong>Agentic AI Learning Operating System</strong><br/>
-  Automated Transformation of Long-Form Video Feeds and Playlists into Interactive Multi-Agent Curricula with LangGraph StateGraphs and Context-Grounded RAG Tutoring.
+  Automated Transformation of Long-Form Video Feeds and Playlists into Interactive Multi-Agent Curricula with LangGraph StateGraphs, Pinecone Vector RAG Tutoring, and Automated Assessment Engines.
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Node.js-20+-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js 20+"/>
   <img src="https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white" alt="Express.js"/>
   <img src="https://img.shields.io/badge/MongoDB-Mongoose-47A248?style=for-the-badge&logo=mongodb&logoColor=white" alt="MongoDB"/>
+  <img src="https://img.shields.io/badge/Pinecone-Vector_DB-000000?style=for-the-badge&logo=pinecone&logoColor=white" alt="Pinecone"/>
   <img src="https://img.shields.io/badge/LangGraph-StateGraph-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white" alt="LangGraph"/>
   <img src="https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React 19"/>
   <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite"/>
@@ -35,10 +36,10 @@
   - [3. LLM Failover & Concurrency Engine](#3-llm-failover--concurrency-engine)
 - [Tech Stack](#tech-stack)
 - [Project Directory Structure](#project-directory-structure)
-- [Data Models & Schema Design](#data-models--schema-design)
+- [Data Models & Vector Storage](#data-models--vector-storage)
   - [User Model](#user-model)
   - [Course Model](#course-model)
-  - [Chunk Model (Vector Store)](#chunk-model-vector-store)
+  - [Pinecone Vector Store (RAG Embeddings)](#pinecone-vector-store-rag-embeddings)
 - [API Reference](#api-reference)
   - [System & Health Endpoints](#system--health-endpoints)
   - [Authentication Endpoints](#authentication-endpoints)
@@ -65,7 +66,7 @@ Adhyaya AI is a full-stack, agentic educational operating system designed to eli
 
 Adhyaya AI solves this by transforming any single YouTube lecture, long-form masterclass (supporting 10+ hours), or entire YouTube playlist into an interactive, multi-module course track.
 
-Using a coordinated multi-agent workflow powered by LangGraph, Adhyaya AI ingests raw video transcripts, extracts prerequisite milestones, structures chronological lesson modules, synthesizes multi-choice quizzes with automated grading, provisions hands-on engineering assignments, and indexes semantic vector embeddings in MongoDB. Learners interact with an embedded Retrieval-Augmented Generation (RAG) AI Tutor that directly cites and jumps to exact `[MM:SS]` video timestamps.
+Using a coordinated multi-agent workflow powered by LangGraph, Adhyaya AI ingests raw video transcripts, extracts prerequisite milestones, structures chronological lesson modules, synthesizes multi-choice quizzes with automated grading, provisions hands-on engineering assignments, and indexes semantic vector embeddings in Pinecone. Learners interact with an embedded Retrieval-Augmented Generation (RAG) AI Tutor that directly cites and jumps to exact `[MM:SS]` video timestamps.
 
 ---
 
@@ -74,14 +75,15 @@ Using a coordinated multi-agent workflow powered by LangGraph, Adhyaya AI ingest
 - **10+ Hour Video Map-Reduce Processing**: Incorporates adaptive timeline sampling (60s, 120s, and 180s intervals) and slice-based prompt mapping to parse massive lecture videos without exceeding token window limits.
 - **YouTube Video & Playlist Ingestion**: Processes single video URLs or full YouTube playlists. Employs a multi-strategy caption ingestion pipeline that leverages YouTube transcript scrapers and direct timedtext XML parsing.
 - **Multi-Agent Curriculum Generation**: Coordinated LangGraph StateGraph executes specialized agents to generate titles, structured lessons, objective quizzes, practical assignments, and module executive summaries.
-- **Context-Grounded RAG AI Tutor**: Embedded conversational assistant that retrieves course transcript chunks via cosine similarity and generates answers with clickable `[MM:SS]` timestamp citations that seek the video player to exact moments.
+- **Context-Grounded RAG AI Tutor**: Embedded conversational assistant that retrieves course transcript chunks via Pinecone cosine similarity vectors and generates answers with clickable `[MM:SS]` timestamp citations that seek the video player to exact moments.
+- **Pinecone Vector Database Architecture**: Namespace-isolated vector indexes per course with 768-dimensional Gemini `text-embedding-004` (and fallback TF-IDF vectorizer) for sub-second semantic retrieval.
 - **Synchronized Video Player Workspace**: Custom responsive player integrated with chapter markers, playback controls, and automatic lesson synchronization.
 - **Interactive Quiz Engine & Automatic Scoring**: Multi-choice assessments with instant validation, answer explanations, score persistence, and completion status updates.
 - **Live Scratchpad & Notes System**: Built-in notepad allowing learners to record timestamped notes while studying.
 - **Markdown Syllabus & Notes Export**: Generates downloadable Markdown files containing the full course syllabus, lesson notes, and module summaries.
 - **Cryptographic Course Completion Certificates**: Automatically issues verifiable certificates with unique SHA-256 hash IDs upon 100% completion of all module lessons.
-- **Dual Authentication**: Full support for both local email/password authentication (with bcrypt hashing and JWT HTTP-only cookies) and Google OAuth 2.0.
-- **Zero-Flicker Custom UI Engine**: Modern interface with smooth scrolling (Lenis), Framer Motion transitions, responsive layouts, and customizable settings.
+- **Dual Authentication**: Full support for both local email/password authentication (with bcrypt hashing and JWT HTTP-only cookies / Bearer headers) and Google OAuth 2.0.
+- **Zero-Flicker Custom UI Engine**: Modern interface with smooth scrolling (Lenis), Framer Motion transitions, responsive layouts, global toast notifications, and customizable settings.
 
 ---
 
@@ -103,7 +105,7 @@ flowchart TD
     end
 
     subgraph APISecurityTier ["2. API Gateway & Security Layer (Express.js)"]
-        API_Auth["JWT HTTP-Only Cookie Authentication & Bcrypt"]
+        API_Auth["JWT HTTP-Only Cookie & Bearer Token Authentication + Bcrypt"]
         API_OAuth["Google OAuth 2.0 Token Exchange"]
         API_CORS["Dynamic Cross-Origin Resource Sharing (CORS)"]
         API_Telemetry["Process Time & Telemetry Middleware (X-Process-Time)"]
@@ -127,16 +129,16 @@ flowchart TD
     end
 
     subgraph VectorRAGTier ["4. Semantic Vector Indexing & RAG Subsystem"]
-        Embed_Engine["Gemini text-embedding-004 / TF-IDF Vectorizer"]
-        Mongo_Chunks["MongoDB Chunk Collection (Cosine Similarity)"]
+        Embed_Engine["Gemini text-embedding-004 / TF-IDF Vectorizer (768 Dimensions)"]
+        Pinecone_DB["Pinecone Vector Database (Course Namespaces)"]
         RAG_Graph["LangGraph Conversational RAG Graph (ragGraph.js)"]
         
-        Graph_Finalize --> Embed_Engine --> Mongo_Chunks
-        UI_Chat <--> API_Router <--> RAG_Graph <--> Mongo_Chunks
+        Graph_Finalize --> Embed_Engine --> Pinecone_DB
+        UI_Chat <--> API_Router <--> RAG_Graph <--> Pinecone_DB
     end
 
     subgraph DataInfraTier ["5. Data Persistence & Cloud Infrastructure"]
-        Mongoose_Engine["Mongoose ODM (MongoDB Atlas)"]
+        Mongoose_Engine["Mongoose ODM (MongoDB Atlas: Users & Courses)"]
         Vercel_Deploy["Vercel Serverless & SPA (vercel.json)"]
         
         API_Router & MultiAgentEngine <--> Mongoose_Engine
@@ -185,6 +187,7 @@ flowchart LR
 4. **finalizeCourseNode**:
    - Synthesizes comprehensive course metadata, title, and description.
    - Compiles the final course schema and marks progress at 100%.
+   - Triggers asynchronous Pinecone vector embedding for all course text chunks.
 
 ### 2. Context-Grounded RAG Tutor StateGraph
 
@@ -200,7 +203,7 @@ flowchart LR
 1. **retrieveChunksNode**:
    - Takes the learner's query and course ID.
    - Computes query vector embedding via Gemini `text-embedding-004` (or fallback TF-IDF vectorizer).
-   - Runs cosine similarity matching across stored chunks in MongoDB for that course, filtering with a minimum relevance score threshold (0.25) and selecting the top 5 chunks.
+   - Queries Pinecone Vector Database scoped to the course namespace (`courseId`), filtering with a relevance score threshold (0.10) and selecting top-k (8) matching chunks.
 2. **generateAnswerNode**:
    - Formats the retrieved chunks with metadata headers (Module name, Section type, and timestamp).
    - Incorporates the last 6 conversation turns for multi-turn dialogue memory.
@@ -230,13 +233,15 @@ The LLM abstraction in `backend/src/services/llmService.js` provides enterprise-
 | **UI & Animations** | Framer Motion & Lenis | Smooth scrolling and interactive UI transitions |
 | **Media Player** | react-youtube | YouTube IFrame Player API wrapper with seeking controls |
 | **Icons** | Lucide React & React Icons | Comprehensive SVG iconography |
+| **HTTP Client** | Axios | Configured with token interceptors and centralized toast error handling |
 | **Backend Runtime** | Node.js 20+ (ES Modules) | High-performance asynchronous JavaScript runtime |
 | **API Framework** | Express.js 4 | RESTful API server with route modularization |
 | **Agent Orchestration** | LangGraph & LangChain Core | StateGraph workflow for multi-agent curriculum and RAG pipelines |
 | **Primary LLM Engine** | Groq SDK | High-throughput inference for Llama 3.3 and open models |
 | **Secondary LLM Engine** | Google Generative AI | Gemini 2.5 Flash fallback and text-embedding-004 embeddings |
-| **Database & ODM** | MongoDB Atlas & Mongoose 8 | Document database for users, courses, and vector chunks |
-| **Authentication** | JWT & Bcrypt.js | Stateless JSON Web Tokens, HTTP-only cookies, and bcrypt hashing |
+| **Vector Database** | Pinecone (`@pinecone-database/pinecone`) | 768-dimensional serverless vector index with per-course namespaces |
+| **Document Database** | MongoDB Atlas & Mongoose 8 | Document database for users, course curricula, progress, and quizzes |
+| **Authentication** | JWT & Bcrypt.js | Stateless JSON Web Tokens, HTTP-only cookies, Bearer headers, and bcrypt |
 | **OAuth Integration** | Google OAuth 2.0 | Google Identity Services token exchange |
 | **Caption Extraction** | youtube-transcript & Googleapis | Multi-strategy transcript retrieval and timedtext XML parsing |
 | **Deployment** | Vercel | Serverless Express backend and Single Page Application frontend |
@@ -251,6 +256,7 @@ Adhyaya AI/
 ├── architecture.png                   # System Architecture Diagram Asset
 ├── thumbnail.png                      # Project Preview Thumbnail Asset
 ├── backend/                           # Backend Express Application
+│   ├── README.md                      # Backend Comprehensive Technical Documentation
 │   ├── package.json                   # Backend Dependencies and Scripts
 │   ├── server.js                      # Express App Initialization & CORS Config
 │   ├── vercel.json                    # Backend Vercel Serverless Routing Config
@@ -265,8 +271,7 @@ Adhyaya AI/
 │       │   └── errorHandler.js        # Global Error Normalization Middleware
 │       ├── models/
 │       │   ├── User.js                # User Schema & Password Hashing Methods
-│       │   ├── Course.js              # Course, Module & Section Nested Schemas
-│       │   └── Chunk.js               # Semantic Vector Chunk Schema for RAG
+│       │   └── Course.js              # Course, Module & Section Nested Schemas
 │       ├── prompts/
 │       │   ├── curriculumPrompts.js   # Prompts for Outline, Quizzes & Summaries
 │       │   └── ragPrompts.js          # Prompts for RAG Grounded Tutoring
@@ -281,7 +286,7 @@ Adhyaya AI/
 │       ├── services/
 │       │   ├── llmService.js          # Groq & Gemini Client with Concurrency Limiter
 │       │   ├── langchainService.js    # LangChain Chat Model Wrapper & Invoker
-│       │   ├── embeddingService.js    # Vector Embeddings, Chunking & Cosine Math
+│       │   ├── embeddingService.js    # Pinecone Vector DB Integration, Embeddings & Cosine Search
 │       │   ├── youtubeService.js      # Multi-Strategy Transcript & Playlist Parser
 │       │   └── markdownService.js     # Markdown Course Syllabus Exporter
 │       ├── controllers/
@@ -292,6 +297,7 @@ Adhyaya AI/
 │           ├── courseRoutes.js        # Course & Learning API Routes
 │           └── healthRoutes.js        # Health Check & Telemetry Stats Routes
 └── frontend/                          # Frontend React SPA Application
+    ├── README.md                      # Frontend Architecture & Component Documentation
     ├── package.json                   # Frontend Dependencies and Scripts
     ├── vite.config.js                 # Vite Configuration & React Plugin
     ├── tailwind.config.js             # Tailwind CSS Configuration
@@ -303,10 +309,12 @@ Adhyaya AI/
         ├── App.jsx                    # Route Hierarchy & Suspense Lazy Boundaries
         ├── index.css                  # Global Styles, Design Tokens & Scrollbars
         ├── context/
-        │   └── AuthContext.jsx        # Global Auth State, Login, Register & Session
+        │   ├── AuthContext.jsx        # Global Auth State, Login, Register & Session
+        │   └── ToastContext.jsx       # Global Toast Notification Provider & Dispatcher
         ├── api/
-        │   └── client.js              # Axios Instance with Base URL & Credentials
-        ├── hooks/                     # Custom React Hooks
+        │   └── axios.js               # Axios Instance with Base URL, Bearer Tokens & Error Handler
+        ├── hooks/
+        │   └── useCourseProgress.js   # Course Progress Computation Hook
         ├── pages/
         │   ├── Home.jsx               # Landing Page with Hero & Feature Grid
         │   ├── Login.jsx              # User Login Interface
@@ -321,8 +329,19 @@ Adhyaya AI/
         │   ├── Loader.jsx             # Animated Loading Spinner
         │   ├── SmoothScroll.jsx       # Lenis Smooth Scrolling Wrapper
         │   ├── NotFound.jsx           # 404 Error Page Component
-        │   ├── Hero/                  # Landing Page Hero Components
+        │   ├── Hero/                  # Landing Page Hero & Feature Sections
+        │   │   ├── Navbar.jsx         # Landing Page Navigation Bar
+        │   │   ├── Hero.jsx           # Hero Header with Demo Video Callout
+        │   │   ├── AIAgents.jsx       # Interactive Multi-Agent Showcase
+        │   │   ├── HowItWorks.jsx     # 4-Step Ingestion & Graph Workflow
+        │   │   ├── EverythingYouNeed.jsx # Complete Feature Breakdown Grid
+        │   │   ├── LearnBeyondWatching.jsx # Value Proposition Comparison
+        │   │   ├── CTA.jsx            # Conversion Call to Action
+        │   │   └── Footer.jsx         # Footer & Social Links
         │   ├── Dashboard/             # Dashboard Widgets & Analytics Components
+        │   │   ├── Navbar.jsx         # Authenticated Application Navbar
+        │   │   ├── Avatar.jsx         # Dynamic User Avatar Generator
+        │   │   └── RecentCourseCard.jsx # Quick Resume Course Card
         │   └── Courses/
         │       ├── CourseCard.jsx     # Course Grid Display Card
         │       ├── CourseOverview.jsx # Course Syllabus & Module Preview Page
@@ -337,7 +356,7 @@ Adhyaya AI/
 
 ---
 
-## Data Models & Schema Design
+## Data Models & Vector Storage
 
 ### User Model
 
@@ -406,24 +425,33 @@ Defined in `backend/src/models/Course.js`:
 }
 ```
 
-### Chunk Model (Vector Store)
+### Pinecone Vector Store (RAG Embeddings)
 
-Defined in `backend/src/models/Chunk.js`:
+Vector search embeddings are indexed directly in Pinecone via `backend/src/services/embeddingService.js`:
 
-```javascript
-{
-  courseId: { type: mongoose.Schema.Types.ObjectId, ref: "Course", required: true, index: true },
-  text: { type: String, required: true },
-  embedding: { type: [Number], required: true }, // Vector array (Gemini or TF-IDF)
-  metadata: {
-    moduleTitle: { type: String, default: "" },
-    sectionType: { type: String, default: "" },
-    startTime: { type: Number, default: 0 },
-    endTime: { type: Number, default: 0 }
-  },
-  createdAt: Date
-}
-```
+- **Index Name**: `adhyaya-ai` (configured via `PINECONE_INDEX`)
+- **Dimensions**: `768` (compatible with Gemini `text-embedding-004` and the fallback TF-IDF vectorizer)
+- **Metric**: `cosine`
+- **Namespace Isolation**: Each course creates a dedicated namespace `courseId` inside the index. When a course is deleted, its namespace vectors are purged via `index.namespace(courseId).deleteAll()`.
+- **Vector Record Structure**:
+  ```javascript
+  {
+    id: `${courseId}_m${mIdx}_s${sIdx}_c${cIdx}`,
+    values: [/* 768 floating point numbers */],
+    metadata: {
+      courseId: "65d8a9b3f1...",
+      moduleId: "0",
+      sectionId: "1",
+      text: "Transcript and summary content snippet...",
+      courseTitle: "Deep Learning Specialization",
+      moduleTitle: "Module 1: Neural Networks",
+      sectionTitle: "Forward Propagation",
+      sectionType: "video",
+      startTime: 120,
+      endTime: 360
+    }
+  }
+  ```
 
 ---
 
@@ -442,11 +470,11 @@ Defined in `backend/src/models/Chunk.js`:
 | Method | Endpoint | Auth | Description |
 | :--- | :--- | :--- | :--- |
 | `POST` | `/auth/register` | No | Create a new user account with name, email, and password |
-| `POST` | `/auth/login` | No | Authenticate user credentials and issue HTTP-only JWT cookie |
+| `POST` | `/auth/login` | No | Authenticate user credentials and issue JWT token / cookie |
 | `POST` | `/auth/google` | No | Exchange Google OAuth ID token for user session |
 | `GET` | `/auth/me` | Yes | Retrieve profile and settings for currently authenticated user |
-| `POST` | `/auth/logout` | No | Invalidate session and clear HTTP-only authentication cookie |
-| `PUT` | `/auth/me` | Yes | Update profile name and details |
+| `POST` | `/auth/logout` | No | Invalidate session and clear authentication state |
+| `PUT` | `/auth/me` | Yes | Update profile name and user details |
 | `PATCH` | `/auth/me/settings` | Yes | Update preferences (dark mode, theme color, font size, layout) |
 
 ### Course & Learning Endpoints
@@ -458,7 +486,7 @@ Defined in `backend/src/models/Chunk.js`:
 | `GET` | `/courses` | Yes | Retrieve all courses belonging to the authenticated user |
 | `GET` | `/courses/:id` | Yes | Retrieve complete course structure, modules, sections, and progress |
 | `PATCH` | `/courses/:id` | Yes | Update course title, description, or metadata |
-| `DELETE` | `/courses/:id` | Yes | Delete course and all corresponding vector embedding chunks |
+| `DELETE` | `/courses/:id` | Yes | Delete course and all corresponding Pinecone vector embeddings |
 | `GET` | `/courses/:id/export` | Yes | Download comprehensive course syllabus and notes as a `.md` file |
 | `GET` | `/courses/:id/certificate`| Yes | Verify 100% course completion and issue cryptographic certificate |
 | `POST` | `/courses/:id/chat` | Yes | Query the RAG AI Tutor with student question and conversation history |
@@ -471,7 +499,7 @@ Defined in `backend/src/models/Chunk.js`:
 
 ### Backend Environment Variables
 
-Create a `.env` file in the `backend/` directory based on the following template:
+Create a `.env` file in the `backend/` directory based on the template:
 
 ```env
 # Server Port & Environment
@@ -499,11 +527,15 @@ GROQ_API_KEY=gsk_your_groq_api_key_here
 
 # YouTube Data API Key (Optional fallback for playlist metadata)
 YOUTUBE_API_KEY=your_youtube_data_api_v3_key_here
+
+# Pinecone Vector Database (768 dimensions, cosine metric)
+PINECONE_API_KEY=your_pinecone_api_key_here
+PINECONE_INDEX=adhyaya-ai
 ```
 
 ### Frontend Environment Variables
 
-Create a `.env` file in the `frontend/` directory based on the following template:
+Create a `.env` file in the `frontend/` directory based on the template:
 
 ```env
 # Backend API Base URL
@@ -526,6 +558,7 @@ Ensure the following tools are installed on your workstation:
 - **Node.js**: Version 20.0.0 or higher
 - **npm**: Version 10.0.0 or higher (or `pnpm` / `yarn`)
 - **MongoDB**: A running local MongoDB instance or a MongoDB Atlas cluster URI
+- **Pinecone Account**: Free tier Pinecone vector index (768 dimensions, cosine metric)
 - **API Keys**: Active API keys from Groq Cloud and Google AI Studio
 
 ### Backend Installation
@@ -542,7 +575,7 @@ Ensure the following tools are installed on your workstation:
    ```bash
    cp .env.example .env
    ```
-   Edit `.env` with your MongoDB URI, JWT Secret, and API keys.
+   Edit `.env` with your MongoDB URI, JWT Secret, Pinecone API Key, and LLM API keys.
 
 4. Start the backend development server (with auto-reloading):
    ```bash
@@ -640,10 +673,20 @@ The backend contains a `backend/vercel.json` file configuring Express serverless
    - `GROQ_API_KEY`: Groq API key
    - `GOOGLE_API_KEY`: Google Gemini API key
    - `GOOGLE_CLIENT_ID`: Google OAuth Client ID
+   - `PINECONE_API_KEY`: Pinecone Vector DB API key
+   - `PINECONE_INDEX`: `adhyaya-ai`
 
 ---
 
 ## Troubleshooting
+
+### Connection Refused (`net::ERR_CONNECTION_REFUSED` / Network Error)
+- **Symptom**: Frontend shows `Failed to load resource: net::ERR_CONNECTION_REFUSED` or `[Adhyaya Login Error] {message: 'Network Error'}` when logging in or making API requests.
+- **Cause**: The backend server is not running on port `8000`, or `VITE_API_URL` is pointing to the wrong host.
+- **Solution**:
+  1. Ensure the backend server is running: `cd backend && npm run dev`.
+  2. Verify that `http://localhost:8000/health` returns `{"status":"healthy","db_connected":true}`.
+  3. Ensure `frontend/.env` contains `VITE_API_URL=http://localhost:8000`.
 
 ### YouTube Caption Extraction Issues
 - **Symptom**: Course creation fails with error "Could not extract video content or transcripts".
@@ -655,8 +698,13 @@ The backend contains a `backend/vercel.json` file configuring Express serverless
 - **Cause**: Reached tier limits on Groq free/developer tier.
 - **Solution**: The platform includes built-in concurrency gating (`p-limit`), automatic exponential backoff retry parsing, and failover to Google Gemini (`gemini-2.5-flash`). Verify both `GROQ_API_KEY` and `GOOGLE_API_KEY` are provided in `.env`.
 
+### Pinecone Vector Database Issues
+- **Symptom**: RAG Chat returns fallback or empty responses.
+- **Cause**: Missing `PINECONE_API_KEY` or index dimension mismatch.
+- **Solution**: Create a Pinecone serverless index with name `adhyaya-ai`, metric `cosine`, and `768` dimensions. If `PINECONE_API_KEY` is omitted, the system falls back to in-memory TF-IDF vector ranking.
+
 ### MongoDB Connection Errors
-- **Symptom**: Backend logs report database connection timeouts.
+- **Symptom**: Backend logs report database connection timeouts (`MongooseError`).
 - **Cause**: IP Whitelist restrictions in MongoDB Atlas or invalid connection string credentials.
 - **Solution**: In MongoDB Atlas, verify that your current IP address (or `0.0.0.0/0` for cloud serverless environments) is permitted under Network Access.
 
